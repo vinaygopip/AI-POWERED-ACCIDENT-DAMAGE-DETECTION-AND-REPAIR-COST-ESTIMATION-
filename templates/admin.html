@@ -1,0 +1,1166 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - AccidentAI{% endblock %}
+
+{% block content %}
+<div
+    style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h2 style="font-size: 2rem; color: var(--text-main); display: flex; align-items: center; gap: 0.75rem;">
+            <i class="fa-solid fa-user-shield" style="color: var(--accent-cyan);"></i> Administrator Control Panel
+        </h2>
+        <p style="color: var(--text-muted); font-size: 0.925rem; margin-top: 0.25rem;">Manage users, inspect AI damage
+            logs, edit records, monitor system metrics, and inspect user feedback & ratings.</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
+        <button type="button" class="btn-custom btn-primary" onclick="openModal('sendNotificationModal')"
+            style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+            <i class="fa-solid fa-bullhorn"></i> Send System Alert
+        </button>
+        <span class="badge-severity badge-minor"><i class="fa-solid fa-signal"></i> System Online</span>
+    </div>
+</div>
+
+<!-- Metric Cards Grid -->
+<div class="metric-grid">
+    <div class="metric-card">
+        <div class="metric-label"><i class="fa-solid fa-users" style="color: var(--primary);"></i> Registered Users
+        </div>
+        <div class="metric-value" style="color: var(--primary);">{{ total_users }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label"><i class="fa-solid fa-car" style="color: var(--accent-cyan);"></i> Registered Vehicles
+        </div>
+        <div class="metric-value" style="color: var(--accent-cyan);">{{ total_vehicles }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label"><i class="fa-solid fa-microchip" style="color: var(--severity-minor);"></i> AI
+            Inspections Run</div>
+        <div class="metric-value" style="color: var(--severity-minor);">{{ total_inspections }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label"><i class="fa-solid fa-indian-rupee-sign" style="color: var(--severity-moderate);"></i>
+            Total Claims Estimated</div>
+        <div class="metric-value" style="color: var(--severity-moderate);">Rs. {{ "{:,.0f}".format(total_claims_cost) }}
+        </div>
+    </div>
+    <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.4);">
+        <div class="metric-label"><i class="fa-solid fa-credit-card" style="color: #10B981;"></i> Paid OR Revenue
+            Collected</div>
+        <div class="metric-value" style="color: #10B981;">Rs. {{ "{:,.0f}".format(total_revenue) }}</div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.3rem;">
+            {{ total_paid_count }} Paid Transactions
+        </div>
+    </div>
+    <div class="metric-card" style="border-color: rgba(245, 158, 11, 0.3);">
+        <div class="metric-label"><i class="fa-solid fa-star" style="color: #F59E0B;"></i> Customer Rating</div>
+        <div class="metric-value" style="color: #F59E0B;">
+            {{ avg_rating }} <span style="font-size: 1.1rem; color: var(--text-muted); font-weight: 500;">/ 5.0 ★</span>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.2rem;">
+            {{ total_feedbacks }} User Reviews
+        </div>
+    </div>
+</div>
+
+<!-- Analytics Graphs Section -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+    <div class="glass-card" style="padding: 1.75rem;">
+        <h3
+            style="font-size: 1.2rem; margin-bottom: 1.25rem; color: var(--text-main); display: flex; align-items: center; gap: 0.6rem;">
+            <i class="fa-solid fa-chart-pie" style="color: var(--primary);"></i> Damage Type Distribution
+        </h3>
+        <div style="position: relative; height: 270px;">
+            <canvas id="damageTypeChart"></canvas>
+        </div>
+    </div>
+
+    <div class="glass-card" style="padding: 1.75rem;">
+        <h3
+            style="font-size: 1.2rem; margin-bottom: 1.25rem; color: var(--text-main); display: flex; align-items: center; gap: 0.6rem;">
+            <i class="fa-solid fa-chart-simple" style="color: var(--accent-cyan);"></i> Inspection Severity Breakdown
+        </h3>
+        <div style="position: relative; height: 270px;">
+            <canvas id="severityChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Inspection Reports History -->
+<div class="glass-card" style="margin-bottom: 2rem; padding: 1.75rem;">
+    <h3 style="font-size: 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem;">
+        <i class="fa-solid fa-file-contract" style="color: var(--severity-minor);"></i> Inspection Reports Repository
+    </h3>
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Report ID</th>
+                    <th>Vehicle Owner</th>
+                    <th>Vehicle Details</th>
+                    <th>Severity Rating</th>
+                    <th>Estimated Cost</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if all_reports %}
+                {% for r in all_reports %}
+                <tr>
+                    <td style="font-weight: 700; color: var(--primary);">{{ r.report_id }}</td>
+                    <td style="font-weight: 600;">{{ r.owner_name }}</td>
+                    <td>{{ r.car_brand }} {{ r.model }}</td>
+                    <td>
+                        {% if r.severity_level == 'Severe' %}
+                        <span class="badge-severity badge-severe">Severe</span>
+                        {% elif r.severity_level == 'Moderate' %}
+                        <span class="badge-severity badge-moderate">Moderate</span>
+                        {% else %}
+                        <span class="badge-severity badge-minor">Minor</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-weight: 700; color: var(--text-main);">Rs. {{ "%.2f"|format(r.total_cost) }}</td>
+                    <td style="font-size: 0.8rem; color: var(--text-muted);">{{ r.created_at }}</td>
+                    <td>
+                        <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
+                            <a href="{{ url_for('report_view', report_id=r.report_id) }}"
+                                class="btn-custom btn-secondary"
+                                style="padding: 0.3rem 0.6rem; font-size: 0.775rem;">View</a>
+                            <a href="{{ url_for('download_pdf_report', report_id=r.report_id) }}"
+                                class="btn-custom btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.775rem;"><i
+                                    class="fa-solid fa-file-pdf"></i> PDF</a>
+                            <button class="btn-custom btn-secondary edit-report-btn" data-report-id="{{ r.report_id }}"
+                                data-severity="{{ r.severity_level }}"
+                                data-status="{{ r.overall_status|default('Completed') }}" data-cost="{{ r.total_cost }}"
+                                style="padding: 0.3rem 0.6rem; font-size: 0.775rem; color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.4);">
+                                <i class="fa-solid fa-pen-to-square"></i> Edit</button>
+                            <button class="btn-custom btn-secondary delete-report-btn"
+                                data-report-id="{{ r.report_id }}"
+                                style="padding: 0.3rem 0.6rem; font-size: 0.775rem; color: #EF4444; border-color: rgba(239, 68, 68, 0.4);">
+                                <i class="fa-solid fa-trash-can"></i> Delete</button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">No inspection
+                        reports saved yet.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Payment Transactions & Revenue Repository -->
+<div class="glass-card" style="margin-bottom: 2rem; padding: 1.75rem; border-color: rgba(16, 185, 129, 0.35);">
+    <div
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+        <h3 style="font-size: 1.25rem; display: flex; align-items: center; gap: 0.6rem; color: var(--text-main);">
+            <i class="fa-solid fa-credit-card" style="color: #10B981;"></i> Payment Gateway Transactions History
+        </h3>
+        {% if pending_payments_count and pending_payments_count > 0 %}
+        <span class="badge-severity badge-moderate" style="font-size: 0.85rem; padding: 0.4rem 0.9rem;">
+            <i class="fa-solid fa-bell fa-bounce"></i> {{ pending_payments_count }} Payment{% if pending_payments_count
+            != 1 %}s{% endif %} Awaiting Approval
+        </span>
+        {% endif %}
+    </div>
+
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Txn ID</th>
+                    <th>Payment ID</th>
+                    <th>Report Ref</th>
+                    <th>Customer Name</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th style="text-align: center;">Admin Action / Receipt</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if all_payments %}
+                {% for p in all_payments %}
+                <tr {% if p.payment_status=='Pending Approval' %}style="background: rgba(245, 158, 11, 0.08);" {% endif
+                    %}>
+                    <td style="font-family: monospace; font-weight: 700; color: var(--accent-cyan);">{{ p.transaction_id
+                        }}</td>
+                    <td style="font-family: monospace; font-size: 0.85rem;">{{ p.payment_id }}</td>
+                    <td><a href="{{ url_for('report_view', report_id=p.report_id) }}"
+                            style="color: var(--primary); font-weight: 600;">{{ p.report_id }}</a></td>
+                    <td style="font-weight: 600;">{{ p.user_name }}</td>
+                    <td style="font-weight: 800; color: #10B981;">Rs. {{ "%.2f"|format(p.amount) }}</td>
+                    <td>
+                        <span style="font-size: 0.85rem; color: var(--text-main);">
+                            <i class="fa-solid fa-credit-card" style="color: var(--primary); margin-right: 0.2rem;"></i>
+                            {{ p.payment_method }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if p.payment_status == 'Success' %}
+                        <span class="badge-severity"
+                            style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3);"><i
+                                class="fa-solid fa-circle-check"></i> Approved</span>
+                        {% elif p.payment_status == 'Pending Approval' %}
+                        <span class="badge-severity badge-moderate"><i class="fa-solid fa-clock"></i> Pending
+                            Approval</span>
+                        {% else %}
+                        <span class="badge-severity badge-severe"><i class="fa-solid fa-circle-xmark"></i>
+                            Rejected</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size: 0.825rem; color: var(--text-muted);">{{ p.created_at }}</td>
+                    <td style="text-align: center;">
+                        {% if p.payment_status == 'Pending Approval' %}
+                        <div style="display: flex; gap: 0.4rem; justify-content: center;">
+                            <form action="{{ url_for('admin_approve_payment', payment_id=p.payment_id) }}" method="POST"
+                                style="display: inline;">
+                                <button type="submit" class="btn-custom"
+                                    style="padding: 0.35rem 0.75rem; font-size: 0.775rem; background: linear-gradient(135deg, #10B981, #059669); color: white; font-weight: 700;">
+                                    <i class="fa-solid fa-check"></i> Accept & Approve
+                                </button>
+                            </form>
+                            <form action="{{ url_for('admin_reject_payment', payment_id=p.payment_id) }}" method="POST"
+                                style="display: inline;">
+                                <button type="submit" class="btn-custom btn-danger"
+                                    style="padding: 0.35rem 0.75rem; font-size: 0.775rem; font-weight: 700;">
+                                    <i class="fa-solid fa-xmark"></i> Reject
+                                </button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <a href="{{ url_for('payment_receipt', payment_id=p.payment_id) }}"
+                            class="btn-custom btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.775rem;">
+                            <i class="fa-solid fa-file-invoice"></i> Receipt
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">No payment
+                        transactions logged yet.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Customer Feedback & Ratings Repository -->
+<div class="glass-card" style="margin-bottom: 2rem; padding: 1.75rem; border-color: rgba(245, 158, 11, 0.35);">
+    <div
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+        <h3 style="font-size: 1.25rem; display: flex; align-items: center; gap: 0.6rem; color: var(--text-main);">
+            <i class="fa-solid fa-star" style="color: #F59E0B;"></i> Customer Feedback & Rating Reviews
+        </h3>
+        <div style="display: flex; align-items: center; gap: 0.85rem;">
+            <span class="stars-gold" style="font-size: 1.05rem; font-weight: 700;">
+                <i class="fa-solid fa-star"></i> {{ avg_rating }} / 5.0
+            </span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">({{ total_feedbacks }} verified reviews)</span>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Reviewer</th>
+                    <th>Rating</th>
+                    <th>Category</th>
+                    <th>Feedback Review</th>
+                    <th>Report Ref</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if all_feedback %}
+                {% for f in all_feedback %}
+                <tr>
+                    <td>
+                        <div style="font-weight: 600; color: var(--text-main);">{{ f.user_name }}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">{{ f.user_email }}</div>
+                    </td>
+                    <td>
+                        <div class="stars-gold" style="font-size: 0.95rem; white-space: nowrap;">
+                            {% for i in range(f.rating) %}<i class="fa-solid fa-star"></i>{% endfor %}
+                            {% for i in range(5 - f.rating) %}<i class="fa-regular fa-star stars-muted"></i>{% endfor %}
+                            <span style="font-weight: 700; font-size: 0.85rem; margin-left: 0.25rem; color: #F59E0B;">{{
+                                f.rating }}.0</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge-category">{{ f.category }}</span>
+                    </td>
+                    <td>
+                        <div
+                            style="max-width: 250px; font-size: 0.85rem; color: var(--text-main); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                            "{{ f.comments }}"
+                        </div>
+                    </td>
+                    <td>
+                        {% if f.report_id %}
+                        <a href="{{ url_for('report_view', report_id=f.report_id) }}"
+                            style="color: var(--primary); font-size: 0.8rem; font-weight: 600; text-decoration: none;">
+                            <i class="fa-solid fa-file-contract"></i> {{ f.report_id }}
+                        </a>
+                        {% else %}
+                        <span style="font-size: 0.75rem; color: var(--text-dim);">General</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if f.status == 'Reviewed' %}
+                        <span class="badge-category badge-status-reviewed"><i class="fa-solid fa-check"></i>
+                            Reviewed</span>
+                        {% else %}
+                        <span class="badge-category badge-status-new"><i class="fa-solid fa-sparkles"></i> New</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size: 0.8rem; color: var(--text-muted); white-space: nowrap;">{{ f.created_at }}
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.35rem; align-items: center;">
+                            <button type="button" class="btn-custom btn-secondary view-feedback-btn"
+                                data-feedback-id="{{ f.feedback_id }}" data-name="{{ f.user_name|escape }}"
+                                data-email="{{ f.user_email|escape }}"
+                                data-contact="{{ f.user_contact|default('N/A')|escape }}" data-rating="{{ f.rating }}"
+                                data-category="{{ f.category|escape }}" data-report="{{ f.report_id|default('') }}"
+                                data-comments="{{ f.comments|escape }}" data-status="{{ f.status }}"
+                                data-date="{{ f.created_at }}"
+                                style="padding: 0.3rem 0.65rem; font-size: 0.775rem; color: #F59E0B; border-color: rgba(245, 158, 11, 0.4);">
+                                <i class="fa-solid fa-eye"></i> Admin Model
+                            </button>
+                            <form action="{{ url_for('admin_feedback_delete', feedback_id=f.feedback_id) }}"
+                                method="POST" style="display: inline;"
+                                onsubmit="return confirm('Delete this feedback review?');">
+                                <button type="submit" class="btn-custom btn-secondary"
+                                    style="padding: 0.3rem 0.55rem; font-size: 0.775rem; color: #EF4444; border-color: rgba(239, 68, 68, 0.4);">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+                        <i class="fa-regular fa-comment-dots"
+                            style="font-size: 2rem; display: block; margin-bottom: 0.5rem; opacity: 0.5;"></i>
+                        No customer feedback submitted yet.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Users & Vehicles Data Grid -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <!-- Registered Users -->
+    <div class="glass-card" style="padding: 1.75rem;">
+        <h3 style="font-size: 1.2rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem;">
+            <i class="fa-solid fa-users" style="color: var(--primary);"></i> Registered Users
+        </h3>
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Contact</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in all_users %}
+                    <tr>
+                        <td style="font-weight: 600;">{{ u.name }}</td>
+                        <td style="font-size: 0.85rem;">{{ u.email }}</td>
+                        <td><span
+                                style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; background: rgba(59,130,246,0.18); color: var(--primary); border: 1px solid rgba(59,130,246,0.3);">{{
+                                u.role }}</span></td>
+                        <td style="font-size: 0.85rem;">{{ u.contact_number or '-' }}</td>
+                        <td>
+                            <div style="display: flex; gap: 0.35rem; align-items: center;">
+                                <button class="btn-custom btn-secondary edit-user-btn" data-user-id="{{ u.user_id }}"
+                                    data-name="{{ u.name|escape }}" data-email="{{ u.email|escape }}"
+                                    data-role="{{ u.role }}" data-contact="{{ u.contact_number|default('')|escape }}"
+                                    data-address="{{ u.address|default('')|escape }}"
+                                    style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.4);">
+                                    <i class="fa-solid fa-pen-to-square"></i></button>
+                                {% if u.user_id != session.user_id %}
+                                <button class="btn-custom btn-secondary delete-user-btn" data-user-id="{{ u.user_id }}"
+                                    data-name="{{ u.name|escape }}" data-email="{{ u.email|escape }}"
+                                    style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: #EF4444; border-color: rgba(239, 68, 68, 0.4);">
+                                    <i class="fa-solid fa-trash-can"></i></button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Registered Vehicles -->
+    <div class="glass-card" style="padding: 1.75rem;">
+        <h3 style="font-size: 1.2rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem;">
+            <i class="fa-solid fa-car" style="color: var(--accent-cyan);"></i> Registered Vehicles
+        </h3>
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Owner</th>
+                        <th>Vehicle Details</th>
+                        <th>VIN Number</th>
+                        <th>Insurance</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in all_vehicles %}
+                    <tr>
+                        <td style="font-weight: 600;">{{ v.owner_name }}</td>
+                        <td>{{ v.car_brand }} {{ v.model }}</td>
+                        <td><span class="badge-severity badge-minor" style="font-size: 0.75rem;">{{ v.vin_number
+                                }}</span></td>
+                        <td style="font-size: 0.85rem;">{{ v.insurance_provider }}</td>
+                        <td>
+                            <div style="display: flex; gap: 0.35rem; align-items: center;">
+                                <button class="btn-custom btn-secondary edit-vehicle-btn"
+                                    data-vehicle-id="{{ v.vehicle_id }}" data-brand="{{ v.car_brand|escape }}"
+                                    data-model="{{ v.model|escape }}" data-year="{{ v.year|default(2023) }}"
+                                    data-color="{{ v.color|default('Black')|escape }}"
+                                    data-vin="{{ v.vin_number|escape }}"
+                                    data-insurance="{{ v.insurance_provider|escape }}"
+                                    data-policy="{{ v.policy_number|escape }}"
+                                    data-coverage="{{ v.coverage_type|escape }}"
+                                    data-expiry="{{ v.expiry_date|escape }}"
+                                    style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.4);">
+                                    <i class="fa-solid fa-pen-to-square"></i></button>
+                                <button class="btn-custom btn-secondary delete-vehicle-btn"
+                                    data-vehicle-id="{{ v.vehicle_id }}"
+                                    data-title="{{ v.car_brand|escape }} {{ v.model|escape }}"
+                                    data-vin="{{ v.vin_number|escape }}"
+                                    style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: #EF4444; border-color: rgba(239, 68, 68, 0.4);">
+                                    <i class="fa-solid fa-trash-can"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- MODALS SECTION -->
+<!-- ================================================================= -->
+
+<!-- 1. Edit User Modal -->
+<div id="editUserModal" class="modal-backdrop">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fa-solid fa-user-pen" style="color: var(--primary);"></i> Edit User
+                Information</h3>
+            <button class="modal-close" onclick="closeModal('editUserModal')">&times;</button>
+        </div>
+        <form id="editUserForm" method="POST">
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="editUserName" name="name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="editUserEmail" name="email" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">System Role</label>
+                <select id="editUserRole" name="role" class="form-control" required>
+                    <option value="user">User</option>
+                    <option value="admin">Administrator</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Contact Number</label>
+                <input type="text" id="editUserContact" name="contact_number" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Address</label>
+                <input type="text" id="editUserAddress" name="address" class="form-control">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-custom btn-secondary"
+                    onclick="closeModal('editUserModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save
+                    Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 2. Delete User Modal -->
+<div id="deleteUserModal" class="modal-backdrop">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 class="modal-title" style="color: #EF4444;"><i class="fa-solid fa-triangle-exclamation"></i> Delete User
+            </h3>
+            <button class="modal-close" onclick="closeModal('deleteUserModal')">&times;</button>
+        </div>
+        <p style="color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5;">
+            Are you sure you want to delete user <strong id="delUserNameText" style="color: var(--text-main);"></strong>
+            (<span id="delUserEmailText"></span>)?
+            <br><span style="font-size: 0.85rem; color: #EF4444;">This action will permanently delete all associated
+                vehicles and inspection reports!</span>
+        </p>
+        <form id="deleteUserForm" method="POST">
+            <div class="modal-footer">
+                <button type="button" class="btn-custom btn-secondary"
+                    onclick="closeModal('deleteUserModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-danger"><i class="fa-solid fa-trash-can"></i> Yes, Delete
+                    User</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 3. Edit Vehicle Modal -->
+<div id="editVehicleModal" class="modal-backdrop">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fa-solid fa-car-rear" style="color: var(--accent-cyan);"></i> Edit Vehicle
+                Information</h3>
+            <button class="modal-close" onclick="closeModal('editVehicleModal')">&times;</button>
+        </div>
+        <form id="editVehicleForm" method="POST">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Car Brand</label>
+                    <select id="editVehicleBrand" name="car_brand" class="form-control" required>
+                        <option value="HONDA">HONDA</option>
+                        <option value="MARUTI SUZUKI">MARUTI SUZUKI</option>
+                        <option value="TOYOTA">TOYOTA</option>
+                        <option value="HYUNDAI">HYUNDAI</option>
+                        <option value="TATA">TATA</option>
+                        <option value="RENAULT">RENAULT</option>
+                        <option value="NISSAN">NISSAN</option>
+                        <option value="SKODA">SKODA</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Model</span>
+                        <span style="font-size: 0.72rem; color: var(--accent-cyan); font-weight: 600;">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Auto
+                        </span>
+                    </label>
+                    <select id="editVehicleModel" name="model" class="form-control" required>
+                    </select>
+                    <div id="editCustomModelWrapper" style="display: none; margin-top: 0.5rem;">
+                        <input type="text" name="custom_model" id="editCustomModelInput" class="form-control" placeholder="Enter custom model name">
+                    </div>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Manufacturing Year</label>
+                    <input type="number" id="editVehicleYear" name="year" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Color</label>
+                    <input type="text" id="editVehicleColor" name="color" class="form-control">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">VIN Number</label>
+                <input type="text" id="editVehicleVin" name="vin_number" class="form-control" required>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Insurance Provider</label>
+                    <input type="text" id="editVehicleInsurance" name="insurance_provider" class="form-control"
+                        required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Policy Number</label>
+                    <input type="text" id="editVehiclePolicy" name="policy_number" class="form-control" required>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Coverage Type</label>
+                    <select id="editVehicleCoverage" name="coverage_type" class="form-control">
+                        <option value="Comprehensive">Comprehensive</option>
+                        <option value="Third Party">Third Party</option>
+                        <option value="Zero Depreciation">Zero Depreciation</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Expiry Date</label>
+                    <input type="date" id="editVehicleExpiry" name="expiry_date" class="form-control" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-custom btn-secondary"
+                    onclick="closeModal('editVehicleModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save
+                    Vehicle</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 4. Delete Vehicle Modal -->
+<div id="deleteVehicleModal" class="modal-backdrop">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 class="modal-title" style="color: #EF4444;"><i class="fa-solid fa-triangle-exclamation"></i> Delete
+                Vehicle</h3>
+            <button class="modal-close" onclick="closeModal('deleteVehicleModal')">&times;</button>
+        </div>
+        <p style="color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5;">
+            Are you sure you want to delete vehicle <strong id="delVehicleTitleText"
+                style="color: var(--text-main);"></strong> (VIN: <span id="delVehicleVinText"></span>)?
+            <br><span style="font-size: 0.85rem; color: #EF4444;">This action will also remove all associated inspection
+                reports!</span>
+        </p>
+        <form id="deleteVehicleForm" method="POST">
+            <div class="modal-footer">
+                <button type="button" class="btn-custom btn-secondary"
+                    onclick="closeModal('deleteVehicleModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-danger"><i class="fa-solid fa-trash-can"></i> Yes, Delete
+                    Vehicle</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 5. Edit Report Modal -->
+<div id="editReportModal" class="modal-backdrop">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fa-solid fa-file-pen" style="color: var(--severity-minor);"></i> Edit
+                Inspection Report</h3>
+            <button class="modal-close" onclick="closeModal('editReportModal')">&times;</button>
+        </div>
+        <form id="editReportForm" method="POST">
+            <div class="form-group">
+                <label class="form-label">Report ID</label>
+                <input type="text" id="editReportId" class="form-control" disabled style="opacity: 0.7;">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Severity Level</label>
+                <select id="editReportSeverity" name="severity_level" class="form-control" required>
+                    <option value="Minor">Minor</option>
+                    <option value="Moderate">Moderate</option>
+                    <option value="Severe">Severe</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Overall Status</label>
+                <select id="editReportStatus" name="overall_status" class="form-control" required>
+                    <option value="Completed">Completed</option>
+                    <option value="Pending Review">Pending Review</option>
+                    <option value="Archived">Archived</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Total Estimated Cost (Rs.)</label>
+                <input type="number" step="0.01" id="editReportCost" name="total_cost" class="form-control" required>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-custom btn-secondary"
+                    onclick="closeModal('editReportModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save
+                    Report</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 6. Delete Report Modal -->
+<div id="deleteReportModal" class="modal-backdrop">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 class="modal-title" style="color: #EF4444;"><i class="fa-solid fa-triangle-exclamation"></i> Delete
+                Inspection Report</h3>
+            <button class="modal-close" onclick="closeModal('deleteReportModal')">&times;</button>
+        </div>
+        <p style="color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5;">
+            Are you sure you want to delete report <strong id="delReportIdText"
+                style="color: var(--text-main);"></strong>?
+            <br><span style="font-size: 0.85rem; color: #EF4444;">This action cannot be undone.</span>
+        </p>
+        <form id="deleteReportForm" method="POST">
+            <div class="modal-footer">
+                <button type="button" class="btn-custom btn-secondary"
+                    onclick="closeModal('deleteReportModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-danger"><i class="fa-solid fa-trash-can"></i> Yes, Delete
+                    Report</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 7. Feedback Detail Admin Model -->
+<div id="feedbackDetailModal" class="modal-backdrop">
+    <div class="modal-container" style="max-width: 620px;">
+        <div class="modal-header">
+            <h3 class="modal-title" style="color: #F59E0B;">
+                <i class="fa-solid fa-star"></i> Feedback & Rating Inspection (Admin Model)
+            </h3>
+            <button class="modal-close" onclick="closeModal('feedbackDetailModal')">&times;</button>
+        </div>
+
+        <!-- User Profile Card -->
+        <div class="info-box-bg"
+            style="padding: 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <div
+                    style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--accent-cyan)); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 700; color: white; box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <div>
+                    <h4 id="fbModalUserName" style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.2rem;">
+                    </h4>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);"><i class="fa-regular fa-envelope"></i>
+                        <span id="fbModalUserEmail"></span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.2rem;"><i
+                            class="fa-solid fa-phone"></i> <span id="fbModalUserContact"></span></div>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <span id="fbModalStatusBadge" class="badge-category"></span>
+                <div id="fbModalDate" style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.35rem;"></div>
+            </div>
+        </div>
+
+        <!-- Rating & Category Breakdown -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+            <div class="info-box-bg" style="padding: 1.1rem; border-radius: var(--radius-md); text-align: center;">
+                <div
+                    style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.35rem; letter-spacing: 0.05em;">
+                    Star Rating</div>
+                <div id="fbModalStars" class="stars-gold" style="font-size: 1.5rem; margin-bottom: 0.25rem;"></div>
+                <div id="fbModalRatingText" style="font-size: 0.925rem; font-weight: 700; color: #F59E0B;"></div>
+            </div>
+
+            <div class="info-box-bg" style="padding: 1.1rem; border-radius: var(--radius-md);">
+                <div
+                    style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.35rem; letter-spacing: 0.05em;">
+                    Review Category</div>
+                <div id="fbModalCategory"
+                    style="font-weight: 700; color: var(--primary); font-size: 0.95rem; margin-bottom: 0.4rem;"></div>
+                <div id="fbModalReportLinkContainer" style="font-size: 0.8rem; color: var(--text-dim);"></div>
+            </div>
+        </div>
+
+        <!-- Full Feedback Comment Box -->
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fa-solid fa-quote-left" style="color: var(--accent-cyan);"></i> Customer Review &
+                    Feedback</span>
+            </label>
+            <div id="fbModalComments"
+                style="background: rgba(11, 15, 25, 0.7); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 1.25rem; font-size: 0.925rem; line-height: 1.6; color: var(--text-main); min-height: 90px; white-space: pre-wrap;">
+            </div>
+        </div>
+
+        <!-- Admin Actions on Feedback -->
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+            <form id="fbStatusForm" method="POST" style="display: inline;">
+                <input type="hidden" name="status" id="fbStatusInput" value="Reviewed">
+                <button type="submit" id="fbStatusToggleBtn" class="btn-custom btn-secondary"
+                    style="font-size: 0.85rem; border-color: rgba(16, 185, 129, 0.4); color: #10B981;">
+                    <i class="fa-solid fa-circle-check"></i> Mark as Reviewed
+                </button>
+            </form>
+
+            <div style="display: flex; gap: 0.75rem;">
+                <form id="fbDeleteForm" method="POST" style="display: inline;"
+                    onsubmit="return confirm('Permanently delete this feedback review?');">
+                    <button type="submit" class="btn-custom btn-danger"
+                        style="font-size: 0.85rem; padding: 0.5rem 1rem;">
+                        <i class="fa-solid fa-trash-can"></i> Delete
+                    </button>
+                </form>
+                <button type="button" class="btn-custom btn-secondary"
+                    onclick="closeModal('feedbackDetailModal')">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 8. Send Notification Modal -->
+<div id="sendNotificationModal" class="modal-backdrop">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 class="modal-title" style="color: var(--accent-cyan);">
+                <i class="fa-solid fa-bullhorn"></i> Send System Notification
+            </h3>
+            <button class="modal-close" onclick="closeModal('sendNotificationModal')">&times;</button>
+        </div>
+        <form action="{{ url_for('admin_send_notification') }}" method="POST">
+            <div class="form-group">
+                <label class="form-label">Recipient Target</label>
+                <select name="target_user" class="form-control" required>
+                    <option value="all">Broadcast to All Users</option>
+                    {% for u in all_users %}
+                    <option value="{{ u.user_id }}">{{ u.name }} ({{ u.email }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Notification Title</label>
+                    <input type="text" name="title" class="form-control" placeholder="e.g. System Maintenance Notice"
+                        required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Alert Type</label>
+                    <select name="type" class="form-control">
+                        <option value="info">Info (Blue)</option>
+                        <option value="success">Success (Green)</option>
+                        <option value="warning">Warning (Amber)</option>
+                        <option value="report">Report (Purple)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Message Content</label>
+                <textarea name="message" class="form-control" rows="3"
+                    placeholder="Enter message to display in the user's notification bell..." required></textarea>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-custom btn-secondary"
+                    onclick="closeModal('sendNotificationModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-primary">
+                    <i class="fa-solid fa-paper-plane"></i> Dispatch Notification
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Modal Toggle Helper Functions
+    function openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.add('show');
+    }
+
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.remove('show');
+    }
+
+    // Bind Edit/Delete buttons via data attributes (avoids Jinja in inline JS)
+    document.querySelectorAll('.edit-user-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var d = this.dataset;
+            document.getElementById('editUserForm').action = '/admin/user/edit/' + d.userId;
+            document.getElementById('editUserName').value = d.name;
+            document.getElementById('editUserEmail').value = d.email;
+            document.getElementById('editUserRole').value = d.role;
+            document.getElementById('editUserContact').value = d.contact;
+            document.getElementById('editUserAddress').value = d.address;
+            openModal('editUserModal');
+        });
+    });
+
+    document.querySelectorAll('.delete-user-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var d = this.dataset;
+            document.getElementById('deleteUserForm').action = '/admin/user/delete/' + d.userId;
+            document.getElementById('delUserNameText').innerText = d.name;
+            document.getElementById('delUserEmailText').innerText = d.email;
+            openModal('deleteUserModal');
+        });
+    });
+
+    const ADMIN_CAR_MODELS = {
+        "HONDA": ["City", "Amaze", "WR-V", "Jazz", "HR-V", "Pilot", "CR-V", "Accord", "Civic"],
+        "MARUTI SUZUKI": ["Swift", "Baleno", "Vitara Brezza", "Wagon R", "Ertiga", "Grand Vitara"],
+        "TOYOTA": ["Corolla", "Camry", "Fortuner", "Innova", "Yaris"],
+        "HYUNDAI": ["i20", "Creta", "Verna", "Venue", "Tucson"],
+        "TATA": ["Nexon", "Harrier", "Safari", "Altroz", "Punch", "Tiago"],
+        "RENAULT": ["Kwid", "Triber", "Kiger", "Duster", "Captur"],
+        "NISSAN": ["Altima", "Rogue", "Sentra", "Pathfinder", "Titan"],
+        "SKODA": ["Octavia", "Superb", "Rapid", "Kodiaq", "Karoq"]
+    };
+
+    function populateAdminVehicleModels(brand, targetModel = null) {
+        const modelSelect = document.getElementById('editVehicleModel');
+        const customWrapper = document.getElementById('editCustomModelWrapper');
+        const customInput = document.getElementById('editCustomModelInput');
+        if (!modelSelect) return;
+
+        modelSelect.innerHTML = '';
+        const models = ADMIN_CAR_MODELS[brand] || [];
+        let matched = false;
+
+        models.forEach((m, idx) => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            if (targetModel && m.toLowerCase() === targetModel.toLowerCase()) {
+                opt.selected = true;
+                matched = true;
+            } else if (!targetModel && idx === 0) {
+                opt.selected = true;
+            }
+            modelSelect.appendChild(opt);
+        });
+
+        const customOpt = document.createElement('option');
+        customOpt.value = '__custom__';
+        customOpt.textContent = '+ Other / Custom Model...';
+        modelSelect.appendChild(customOpt);
+
+        if (targetModel && !matched) {
+            customOpt.selected = true;
+            if (customWrapper && customInput) {
+                customWrapper.style.display = 'block';
+                customInput.value = targetModel;
+                customInput.required = true;
+            }
+        } else {
+            if (customWrapper && customInput) {
+                customWrapper.style.display = 'none';
+                customInput.value = '';
+                customInput.required = false;
+            }
+        }
+    }
+
+    const editBrandElem = document.getElementById('editVehicleBrand');
+    if (editBrandElem) {
+        editBrandElem.addEventListener('change', function() {
+            populateAdminVehicleModels(this.value);
+        });
+    }
+
+    const editModelElem = document.getElementById('editVehicleModel');
+    if (editModelElem) {
+        editModelElem.addEventListener('change', function() {
+            const customWrapper = document.getElementById('editCustomModelWrapper');
+            const customInput = document.getElementById('editCustomModelInput');
+            if (this.value === '__custom__') {
+                if (customWrapper && customInput) {
+                    customWrapper.style.display = 'block';
+                    customInput.required = true;
+                    customInput.focus();
+                }
+            } else {
+                if (customWrapper && customInput) {
+                    customWrapper.style.display = 'none';
+                    customInput.required = false;
+                    customInput.value = '';
+                }
+            }
+        });
+    }
+
+    document.querySelectorAll('.edit-vehicle-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var d = this.dataset;
+            document.getElementById('editVehicleForm').action = '/admin/vehicle/edit/' + d.vehicleId;
+
+            // Match or insert brand
+            const brandSelect = document.getElementById('editVehicleBrand');
+            let foundBrand = false;
+            for (let i = 0; i < brandSelect.options.length; i++) {
+                if (brandSelect.options[i].value.toUpperCase() === (d.brand || '').toUpperCase()) {
+                    brandSelect.selectedIndex = i;
+                    foundBrand = true;
+                    break;
+                }
+            }
+            if (!foundBrand && d.brand) {
+                const opt = document.createElement('option');
+                opt.value = d.brand;
+                opt.textContent = d.brand;
+                opt.selected = true;
+                brandSelect.appendChild(opt);
+            }
+
+            populateAdminVehicleModels(brandSelect.value, d.model);
+
+            document.getElementById('editVehicleYear').value = d.year;
+            document.getElementById('editVehicleColor').value = d.color;
+            document.getElementById('editVehicleVin').value = d.vin;
+            document.getElementById('editVehicleInsurance').value = d.insurance;
+            document.getElementById('editVehiclePolicy').value = d.policy;
+            document.getElementById('editVehicleCoverage').value = d.coverage;
+            document.getElementById('editVehicleExpiry').value = d.expiry;
+            openModal('editVehicleModal');
+        });
+    });
+
+    document.querySelectorAll('.delete-vehicle-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var d = this.dataset;
+            document.getElementById('deleteVehicleForm').action = '/admin/vehicle/delete/' + d.vehicleId;
+            document.getElementById('delVehicleTitleText').innerText = d.title;
+            document.getElementById('delVehicleVinText').innerText = d.vin;
+            openModal('deleteVehicleModal');
+        });
+    });
+
+    document.querySelectorAll('.edit-report-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var d = this.dataset;
+            document.getElementById('editReportForm').action = '/admin/report/edit/' + d.reportId;
+            document.getElementById('editReportId').value = d.reportId;
+            document.getElementById('editReportSeverity').value = d.severity;
+            document.getElementById('editReportStatus').value = d.status;
+            document.getElementById('editReportCost').value = parseFloat(d.cost).toFixed(2);
+            openModal('editReportModal');
+        });
+    });
+
+    document.querySelectorAll('.delete-report-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var d = this.dataset;
+            document.getElementById('deleteReportForm').action = '/admin/report/delete/' + d.reportId;
+            document.getElementById('delReportIdText').innerText = d.reportId;
+            openModal('deleteReportModal');
+        });
+    });
+
+    // Feedback Detail Admin Model Handler
+    document.querySelectorAll('.view-feedback-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var d = this.dataset;
+            document.getElementById('fbModalUserName').innerText = d.name;
+            document.getElementById('fbModalUserEmail').innerText = d.email;
+            document.getElementById('fbModalUserContact').innerText = d.contact;
+            document.getElementById('fbModalDate').innerText = d.date;
+            document.getElementById('fbModalCategory').innerText = d.category;
+            document.getElementById('fbModalComments').innerText = d.comments;
+
+            // Render stars
+            var r = parseInt(d.rating, 10) || 5;
+            var starsHtml = '';
+            for (var i = 0; i < r; i++) { starsHtml += '<i class="fa-solid fa-star"></i> '; }
+            for (var j = 0; j < 5 - r; j++) { starsHtml += '<i class="fa-regular fa-star stars-muted"></i> '; }
+            document.getElementById('fbModalStars').innerHTML = starsHtml;
+            document.getElementById('fbModalRatingText').innerText = r + ' out of 5 Stars';
+
+            // Report reference link
+            var repContainer = document.getElementById('fbModalReportLinkContainer');
+            if (d.report && d.report !== 'None' && d.report !== '') {
+                repContainer.innerHTML = '<span style="color: var(--text-muted);">Inspection:</span> <a href="/report/' + d.report + '" style="color: var(--accent-cyan); font-weight: 600; text-decoration: none;"><i class="fa-solid fa-file-contract"></i> ' + d.report + '</a>';
+            } else {
+                repContainer.innerHTML = '<span style="color: var(--text-muted);">Scope:</span> General Platform Feedback';
+            }
+
+            // Status badge
+            var stBadge = document.getElementById('fbModalStatusBadge');
+            if (d.status === 'Reviewed') {
+                stBadge.className = 'badge-category badge-status-reviewed';
+                stBadge.innerHTML = '<i class="fa-solid fa-check"></i> Reviewed';
+                document.getElementById('fbStatusInput').value = 'New';
+                document.getElementById('fbStatusToggleBtn').innerHTML = '<i class="fa-solid fa-rotate-left"></i> Revert to New';
+            } else {
+                stBadge.className = 'badge-category badge-status-new';
+                stBadge.innerHTML = '<i class="fa-solid fa-sparkles"></i> New';
+                document.getElementById('fbStatusInput').value = 'Reviewed';
+                document.getElementById('fbStatusToggleBtn').innerHTML = '<i class="fa-solid fa-circle-check"></i> Mark as Reviewed';
+            }
+
+            document.getElementById('fbStatusForm').action = '/admin/feedback/status/' + d.feedbackId;
+            document.getElementById('fbDeleteForm').action = '/admin/feedback/delete/' + d.feedbackId;
+
+            openModal('feedbackDetailModal');
+        });
+    });
+
+    // Close modals when clicking backdrop
+    window.onclick = function (event) {
+        if (event.target.classList.contains('modal-backdrop')) {
+            event.target.classList.remove('show');
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. Damage Type Doughnut Chart
+        const damageDistData = JSON.parse('{{ (damage_dist or [])|tojson|safe }}');
+        const damageLabels = damageDistData.length ? damageDistData.map(d => d.damage_type) : ['Scratch', 'Dent', 'Crack', 'Broken Part'];
+        const damageCounts = damageDistData.length ? damageDistData.map(d => d.count) : [12, 19, 7, 5];
+
+        new Chart(document.getElementById('damageTypeChart'), {
+            type: 'doughnut',
+            data: {
+                labels: damageLabels,
+                datasets: [{
+                    data: damageCounts,
+                    backgroundColor: ['#3B82F6', '#F59E0B', '#06B6D4', '#EF4444'],
+                    borderColor: '#0F172A',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#94A3B8', font: { family: 'Inter', size: 12 } } }
+                }
+            }
+        });
+
+        // 2. Severity Level Bar Chart
+        const severityData = JSON.parse('{{ (severity_dist or [])|tojson|safe }}');
+        const sevLabels = severityData.length ? severityData.map(s => s.severity_level) : ['Minor', 'Moderate', 'Severe'];
+        const sevCounts = severityData.length ? severityData.map(s => s.count) : [15, 10, 4];
+
+        new Chart(document.getElementById('severityChart'), {
+            type: 'bar',
+            data: {
+                labels: sevLabels,
+                datasets: [{
+                    label: 'Inspections Count',
+                    data: sevCounts,
+                    backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { ticks: { color: '#94A3B8', font: { family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#94A3B8', font: { family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                },
+                plugins: {
+                    legend: { labels: { color: '#94A3B8', font: { family: 'Inter' } } }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

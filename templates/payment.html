@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Checkout - AccidentAI{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 1.5rem auto;">
+    <!-- Breadcrumb / Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fa-solid fa-credit-card" style="color: var(--primary);"></i> Repair Service Payment Checkout
+            </h1>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.35rem;">
+                Complete your transaction securely to confirm workshop repair & claim processing for Report <strong style="color: var(--accent-cyan);">{{ report.report_id }}</strong>.
+            </p>
+        </div>
+        <a href="{{ url_for('severity_analysis', report_id=report.report_id) }}" class="btn-custom btn-secondary">
+            <i class="fa-solid fa-arrow-left"></i> Back to Inspection Analysis
+        </a>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1.25fr; gap: 2rem; align-items: start;">
+        
+        <!-- Left Column: Report & Cost Summary -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- Vehicle & Report Card -->
+            <div class="glass-card" style="padding: 1.75rem;">
+                <h3 style="font-size: 1.15rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem; color: var(--text-main);">
+                    <i class="fa-solid fa-car" style="color: var(--primary);"></i> Vehicle Inspection Summary
+                </h3>
+
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.925rem;">
+                    <div style="display: flex; justify-content: space-between; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border-card);">
+                        <span style="color: var(--text-muted);">Vehicle Model:</span>
+                        <span style="font-weight: 700; color: var(--text-main);">{{ vehicle.car_brand }} {{ vehicle.model }} ({{ vehicle.year }})</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border-card);">
+                        <span style="color: var(--text-muted);">VIN Number:</span>
+                        <span style="font-weight: 600; color: var(--text-main); font-family: monospace;">{{ vehicle.vin_number }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border-card);">
+                        <span style="color: var(--text-muted);">Insurance Provider:</span>
+                        <span style="font-weight: 600; color: var(--text-main);">{{ vehicle.insurance_provider }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-muted);">Policy Number:</span>
+                        <span style="font-weight: 600; color: var(--text-main);">{{ vehicle.policy_number }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost Breakdown -->
+            <div class="glass-card" style="padding: 1.75rem; border-color: rgba(59, 130, 246, 0.3);">
+                <h3 style="font-size: 1.15rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem; color: var(--text-main);">
+                    <i class="fa-solid fa-receipt" style="color: var(--accent-cyan);"></i> Cost Breakdown
+                </h3>
+
+                <div class="info-box-bg" style="padding: 1.25rem; border-radius: var(--radius-md); margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.65rem; color: var(--text-muted); font-size: 0.9rem;">
+                        <span>Parts Cost ({{ detections|length }} item{% if detections|length != 1 %}s{% endif %}):</span>
+                        <span style="color: var(--text-main); font-weight: 600;">Rs. {{ "%.2f"|format(report.total_parts_cost) }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.65rem; color: var(--text-muted); font-size: 0.9rem;">
+                        <span>Labour & Repair Charges:</span>
+                        <span style="color: var(--text-main); font-weight: 600;">Rs. {{ "%.2f"|format(report.total_labour_cost) }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.65rem; color: var(--text-muted); font-size: 0.9rem;">
+                        <span>Paint & Refinishing:</span>
+                        <span style="color: var(--text-main); font-weight: 600;">Rs. {{ "%.2f"|format(report.total_paint_cost) }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.65rem; color: var(--text-muted); font-size: 0.9rem;">
+                        <span>GST Tax (18%):</span>
+                        <span style="color: var(--text-main); font-weight: 600;">Rs. {{ "%.2f"|format(report.tax_amount) }}</span>
+                    </div>
+                    <hr style="border-color: var(--border-card); margin: 0.85rem 0;">
+                    <div style="display: flex; justify-content: space-between; font-size: 1.25rem; font-weight: 800; color: #10B981;">
+                        <span>TOTAL AMOUNT PAYABLE:</span>
+                        <span>Rs. {{ "%.2f"|format(report.total_cost) }}</span>
+                    </div>
+                </div>
+
+                <div style="font-size: 0.825rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; background: rgba(59, 130, 246, 0.08); padding: 0.75rem; border-radius: 8px;">
+                    <i class="fa-solid fa-shield-halved" style="color: var(--primary); font-size: 1.1rem;"></i>
+                    <span>Payments are protected with end-to-end 256-bit SSL encryption and instant workshop confirmation.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Payment Gateway Tabs & Form -->
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.35rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.6rem; color: var(--text-main);">
+                <i class="fa-solid fa-lock" style="color: #10B981;"></i> Select Payment Method
+            </h2>
+
+            <!-- Payment Method Navigation Tabs -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1.75rem;" id="payment-tabs">
+                <button type="button" class="pay-tab active" data-method="card" onclick="switchTab('card')">
+                    <i class="fa-solid fa-credit-card"></i>
+                    <span>Card</span>
+                </button>
+                <button type="button" class="pay-tab" data-method="upi" onclick="switchTab('upi')">
+                    <i class="fa-solid fa-qrcode"></i>
+                    <span>UPI / QR</span>
+                </button>
+                <button type="button" class="pay-tab" data-method="netbanking" onclick="switchTab('netbanking')">
+                    <i class="fa-solid fa-building-columns"></i>
+                    <span>NetBanking</span>
+                </button>
+                <button type="button" class="pay-tab" data-method="cash" onclick="switchTab('cash')">
+                    <i class="fa-solid fa-warehouse"></i>
+                    <span>Workshop</span>
+                </button>
+            </div>
+
+            <!-- Main Payment Form -->
+            <form action="{{ url_for('process_payment') }}" method="POST" id="payment-form">
+                <input type="hidden" name="report_id" value="{{ report.report_id }}">
+                <input type="hidden" name="amount" value="{{ report.total_cost }}">
+                <input type="hidden" name="payment_method" id="selected-payment-method" value="Credit/Debit Card">
+
+                <!-- Tab 1: Credit / Debit Card -->
+                <div class="pay-tab-content active" id="tab-card">
+                    <div style="margin-bottom: 1.25rem;">
+                        <label style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.4rem; font-weight: 600;">Cardholder Name</label>
+                        <input type="text" name="card_name" id="card_name" placeholder="John Doe" class="custom-input" style="width: 100%;" required>
+                    </div>
+
+                    <div style="margin-bottom: 1.25rem;">
+                        <label style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.4rem; font-weight: 600;">Card Number</label>
+                        <div style="position: relative;">
+                            <input type="text" name="card_number" id="card_number" placeholder="4532 •••• •••• 8892" class="custom-input" style="width: 100%; letter-spacing: 1px; font-family: monospace;" maxlength="19" required>
+                            <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);">
+                                <i class="fa-brands fa-cc-visa" style="font-size: 1.3rem; margin-right: 0.2rem;"></i>
+                                <i class="fa-brands fa-cc-mastercard" style="font-size: 1.3rem;"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.4rem; font-weight: 600;">Expiry Date</label>
+                            <input type="text" name="card_expiry" id="card_expiry" placeholder="MM/YY" class="custom-input" style="width: 100%; text-align: center;" maxlength="5" required>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.4rem; font-weight: 600;">CVV / CVC</label>
+                            <input type="password" name="card_cvv" id="card_cvv" placeholder="•••" class="custom-input" style="width: 100%; text-align: center;" maxlength="4" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: UPI / QR Code -->
+                <div class="pay-tab-content" id="tab-upi" style="display: none;">
+                    <div style="margin-bottom: 1.25rem;">
+                        <label style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.6rem; font-weight: 600;">Select UPI Provider</label>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1rem;">
+                            <div class="upi-option active" onclick="selectUpiApp(this, 'Google Pay')">
+                                <i class="fa-brands fa-google-pay" style="font-size: 1.8rem; color: #4285F4;"></i>
+                                <span>GPay</span>
+                            </div>
+                            <div class="upi-option" onclick="selectUpiApp(this, 'PhonePe')">
+                                <i class="fa-solid fa-mobile-screen-button" style="font-size: 1.5rem; color: #5f259f;"></i>
+                                <span>PhonePe</span>
+                            </div>
+                            <div class="upi-option" onclick="selectUpiApp(this, 'Paytm')">
+                                <i class="fa-solid fa-wallet" style="font-size: 1.5rem; color: #00baf2;"></i>
+                                <span>Paytm</span>
+                            </div>
+                            <div class="upi-option" onclick="selectUpiApp(this, 'BHIM UPI')">
+                                <i class="fa-solid fa-building-columns" style="font-size: 1.5rem; color: #ff9900;"></i>
+                                <span>BHIM</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 1.25rem;">
+                        <label style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.4rem; font-weight: 600;">Enter Virtual Payment Address (UPI ID)</label>
+                        <input type="text" name="upi_id" id="upi_id" placeholder="username@okaxis or 9876543210@ybl" class="custom-input" style="width: 100%;">
+                    </div>
+
+                    <div class="info-box-bg" style="padding: 1.25rem; border-radius: var(--radius-md); text-align: center; border: 1px dashed var(--primary); margin-bottom: 1.25rem;">
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Or Scan QR Code to Pay instantly</div>
+                        <div style="width: 130px; height: 130px; margin: 0 auto; background: #ffffff; padding: 10px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                            <svg width="110" height="110" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="100" height="100" fill="white"/>
+                                <path d="M10 10H40V40H10V10ZM15 15V35H35V15H15Z" fill="#0F172A"/>
+                                <path d="M20 20H30V30H20V20Z" fill="#0F172A"/>
+                                <path d="M60 10H90V40H60V10ZM65 15V35H85V15H65Z" fill="#0F172A"/>
+                                <path d="M70 20H80V30H70V20Z" fill="#0F172A"/>
+                                <path d="M10 60H40V90H10V60ZM15 65V85H35V65H15Z" fill="#0F172A"/>
+                                <path d="M20 70H30V80H20V70Z" fill="#0F172A"/>
+                                <rect x="50" y="50" width="10" height="10" fill="#0F172A"/>
+                                <rect x="70" y="50" width="20" height="10" fill="#0F172A"/>
+                                <rect x="60" y="70" width="10" height="20" fill="#0F172A"/>
+                                <rect x="80" y="80" width="10" height="10" fill="#0F172A"/>
+                            </svg>
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--accent-cyan); margin-top: 0.5rem;">Accepts all UPI Apps & QR Scanners</div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Net Banking -->
+                <div class="pay-tab-content" id="tab-netbanking" style="display: none;">
+                    <div style="margin-bottom: 1.25rem;">
+                        <label style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.6rem; font-weight: 600;">Popular Banks</label>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.25rem;">
+                            <div class="bank-option active" onclick="selectBank(this, 'HDFC Bank')">
+                                <i class="fa-solid fa-building-columns" style="color: #004c8f;"></i> HDFC Bank
+                            </div>
+                            <div class="bank-option" onclick="selectBank(this, 'State Bank of India')">
+                                <i class="fa-solid fa-building-columns" style="color: #280071;"></i> SBI
+                            </div>
+                            <div class="bank-option" onclick="selectBank(this, 'ICICI Bank')">
+                                <i class="fa-solid fa-building-columns" style="color: #f26522;"></i> ICICI Bank
+                            </div>
+                            <div class="bank-option" onclick="selectBank(this, 'Axis Bank')">
+                                <i class="fa-solid fa-building-columns" style="color: #97144d;"></i> Axis Bank
+                            </div>
+                            <div class="bank-option" onclick="selectBank(this, 'Kotak Bank')">
+                                <i class="fa-solid fa-building-columns" style="color: #ed1c24;"></i> Kotak Bank
+                            </div>
+                            <div class="bank-option" onclick="selectBank(this, 'Punjab National Bank')">
+                                <i class="fa-solid fa-building-columns" style="color: #a20a2a;"></i> PNB
+                            </div>
+                        </div>
+
+                        <label style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.4rem; font-weight: 600;">Or Select Other Bank</label>
+                        <select name="netbanking_bank" id="netbanking_bank" class="custom-input" style="width: 100%;">
+                            <option value="HDFC Bank">HDFC Bank</option>
+                            <option value="State Bank of India">State Bank of India</option>
+                            <option value="ICICI Bank">ICICI Bank</option>
+                            <option value="Axis Bank">Axis Bank</option>
+                            <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
+                            <option value="Bank of Baroda">Bank of Baroda</option>
+                            <option value="IDFC FIRST Bank">IDFC FIRST Bank</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Workshop Cash / Pay at Center -->
+                <div class="pay-tab-content" id="tab-cash" style="display: none;">
+                    <div class="info-box-bg" style="padding: 1.5rem; border-radius: var(--radius-md); text-align: center; margin-bottom: 1.5rem;">
+                        <i class="fa-solid fa-store" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+                        <h4 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.5rem;">Pay directly at Repair Workshop</h4>
+                        <p style="font-size: 0.9rem; color: var(--text-muted); max-width: 400px; margin: 0 auto 1rem auto;">
+                            Reserve your repair slot now and complete the payment using Cash, Card, or UPI at the partner workshop center upon vehicle delivery.
+                        </p>
+                        <div style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #10B981; background: rgba(16, 185, 129, 0.1); padding: 0.5rem 1rem; border-radius: 20px;">
+                            <i class="fa-solid fa-circle-check"></i> Zero Cancellation Fee
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button & Loader -->
+                <div style="margin-top: 1.75rem;">
+                    <button type="submit" id="pay-btn" class="btn-custom btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem; justify-content: center; font-weight: 700; border-radius: var(--radius-md); background: linear-gradient(135deg, #10B981, #059669);">
+                        <i class="fa-solid fa-shield-check" id="btn-icon"></i>
+                        <span id="btn-text">Pay Rs. {{ "%.2f"|format(report.total_cost) }} Securely</span>
+                    </button>
+                </div>
+            </form>
+
+            <div style="display: flex; justify-content: center; align-items: center; gap: 1.5rem; margin-top: 1.5rem; font-size: 0.775rem; color: var(--text-muted);">
+                <span><i class="fa-solid fa-lock" style="color: #10B981;"></i> SSL Secured</span>
+                <span><i class="fa-solid fa-shield" style="color: var(--primary);"></i> PCI-DSS Compliant</span>
+                <span><i class="fa-solid fa-bolt" style="color: #F59E0B;"></i> Instant Confirmation</span>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+.pay-tab {
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid var(--border-card);
+    color: var(--text-muted);
+    padding: 0.75rem 0.5rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.25s ease;
+}
+
+.pay-tab i {
+    font-size: 1.1rem;
+}
+
+.pay-tab:hover {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--text-main);
+}
+
+.pay-tab.active {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+
+.upi-option, .bank-option {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--border-card);
+    padding: 0.75rem 0.5rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    font-size: 0.775rem;
+    color: var(--text-main);
+    transition: all 0.2s ease;
+}
+
+.bank-option {
+    flex-direction: row;
+    font-size: 0.825rem;
+    padding: 0.65rem 0.75rem;
+    justify-content: flex-start;
+}
+
+.upi-option:hover, .bank-option:hover {
+    border-color: var(--primary);
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.upi-option.active, .bank-option.active {
+    border-color: var(--accent-cyan);
+    background: rgba(6, 182, 212, 0.15);
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+}
+</style>
+
+<script>
+function switchTab(method) {
+    document.querySelectorAll('.pay-tab').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.pay-tab[data-method="${method}"]`).classList.add('active');
+
+    document.querySelectorAll('.pay-tab-content').forEach(content => content.style.display = 'none');
+    document.getElementById(`tab-${method}`).style.display = 'block';
+
+    const methodNames = {
+        'card': 'Credit/Debit Card',
+        'upi': 'UPI / QR Code',
+        'netbanking': 'Net Banking',
+        'cash': 'Cash at Workshop'
+    };
+    document.getElementById('selected-payment-method').value = methodNames[method] || 'Credit/Debit Card';
+
+    const isCard = method === 'card';
+    document.getElementById('card_name').required = isCard;
+    document.getElementById('card_number').required = isCard;
+    document.getElementById('card_expiry').required = isCard;
+    document.getElementById('card_cvv').required = isCard;
+}
+
+function selectUpiApp(element, appName) {
+    document.querySelectorAll('.upi-option').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+}
+
+function selectBank(element, bankName) {
+    document.querySelectorAll('.bank-option').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    document.getElementById('netbanking_bank').value = bankName;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const cardNum = document.getElementById('card_number');
+    cardNum.addEventListener('input', function(e) {
+        let val = e.target.value.replace(/\D/g, '');
+        val = val.substring(0, 16);
+        let formatted = val.match(/.{1,4}/g)?.join(' ') || val;
+        e.target.value = formatted;
+    });
+
+    const cardExp = document.getElementById('card_expiry');
+    cardExp.addEventListener('input', function(e) {
+        let val = e.target.value.replace(/\D/g, '');
+        if (val.length >= 2) {
+            val = val.substring(0, 2) + '/' + val.substring(2, 4);
+        }
+        e.target.value = val;
+    });
+
+    const form = document.getElementById('payment-form');
+    form.addEventListener('submit', function() {
+        const btn = document.getElementById('pay-btn');
+        const icon = document.getElementById('btn-icon');
+        const text = document.getElementById('btn-text');
+
+        btn.disabled = true;
+        btn.style.opacity = '0.8';
+        icon.className = 'fa-solid fa-spinner fa-spin';
+        text.innerText = 'Processing Payment Securely...';
+    });
+});
+</script>
+{% endblock %}

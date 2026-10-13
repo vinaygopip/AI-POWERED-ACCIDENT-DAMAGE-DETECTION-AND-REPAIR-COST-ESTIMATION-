@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}AI Vehicle Accident Damage Detection & Cost Estimator{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Full-screen hero ── */
+    body {
+        background: url("{{ url_for('static', filename='images/hero_bg_hd.jpg') }}") no-repeat center center fixed !important;
+        background-size: cover !important;
+        overflow-x: hidden;
+    }
+
+    /* Hide default navbar */
+    .navbar {
+        display: none !important;
+    }
+
+    .main-wrapper {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .flash-messages {
+        position: fixed;
+        top: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        width: 90%;
+        max-width: 500px;
+    }
+
+    /* ── Floating Login Button ── */
+    .hero-login-btn {
+        position: fixed;
+        top: 1.25rem;
+        right: 1.5rem;
+        z-index: 1000;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(14, 82, 168, 0.85);
+        color: #fff;
+        border: 1.5px solid rgba(100, 180, 255, 0.4);
+        padding: 0.55rem 1.25rem;
+        border-radius: 50px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        font-family: 'Inter', sans-serif;
+        text-decoration: none;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0, 100, 255, 0.35);
+        transition: background 0.25s, box-shadow 0.25s, transform 0.2s;
+    }
+
+    .hero-login-btn:hover {
+        background: rgba(29, 102, 200, 0.95);
+        box-shadow: 0 6px 28px rgba(0, 120, 255, 0.55);
+        transform: translateY(-2px);
+    }
+
+    /* ── Hero Section ── */
+    .hero-section {
+        position: relative;
+        min-height: 100vh;
+        width: 100%;
+        display: flex;
+        align-items: center;
+    }
+
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to right,
+                rgba(4, 12, 30, 0.38) 0%,
+                rgba(4, 12, 30, 0.18) 50%,
+                rgba(4, 12, 30, 0.0) 100%);
+        pointer-events: none;
+    }
+
+    /* ── Left Content ── */
+    .hero-content {
+        position: relative;
+        z-index: 2;
+        padding: 0 3.5rem 0 4.5rem;
+        max-width: 620px;
+    }
+
+
+
+    .hero-title {
+        font-family: 'Outfit', 'Inter', sans-serif;
+        font-size: clamp(2.4rem, 4.5vw, 3.6rem);
+        font-weight: 800;
+        line-height: 1.1;
+        margin: 0 0 1.25rem 0;
+        color: #fff;
+        text-shadow: 0 3px 24px rgba(0, 0, 0, 0.55);
+    }
+
+    .hero-title .highlight {
+        color: #38BDF8;
+        display: block;
+    }
+
+    .hero-sub {
+        font-size: 1.05rem;
+        color: #CBD5E1;
+        line-height: 1.65;
+        margin-bottom: 2.2rem;
+        max-width: 480px;
+        text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+    }
+
+    /* ── Buttons ── */
+    .hero-btns {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .hbtn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.75rem;
+        border-radius: 8px;
+        font-size: 0.96rem;
+        font-weight: 700;
+        font-family: 'Inter', sans-serif;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+        transition: transform 0.2s, box-shadow 0.25s;
+    }
+
+    .hbtn:hover {
+        transform: translateY(-2px);
+    }
+
+    .hbtn-primary {
+        background: #2563EB;
+        color: #fff;
+        box-shadow: 0 4px 18px rgba(37, 99, 235, 0.55);
+    }
+
+    .hbtn-primary:hover {
+        box-shadow: 0 6px 26px rgba(37, 99, 235, 0.75);
+        background: #1D4ED8;
+    }
+
+    .hbtn-outline {
+        background: rgba(30, 41, 59, 0.55);
+        color: #E2E8F0;
+        border: 1.5px solid rgba(148, 163, 184, 0.45);
+        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    }
+
+    .hbtn-outline:hover {
+        background: rgba(51, 65, 85, 0.75);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    }
+
+
+    @media (max-width: 768px) {
+        .hero-content {
+            padding: 0 1.5rem;
+            max-width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Floating Login / User Controls -->
+{% if session.user_id %}
+<div style="position:fixed;top:1.25rem;right:1.5rem;z-index:1000;display:flex;align-items:center;gap:0.75rem;">
+    <span
+        style="font-size:0.82rem;color:#CBD5E1;background:rgba(15,23,42,0.65);padding:0.45rem 0.9rem;border-radius:50px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.12);">
+        <i class="fa-regular fa-circle-user" style="color:#38BDF8;"></i> {{ session.name }}
+    </span>
+    <a href="{{ url_for('logout') }}" class="hero-login-btn"
+        style="background:rgba(127,29,29,0.75);border-color:rgba(239,68,68,0.4);">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+    </a>
+</div>
+{% else %}
+<a href="{{ url_for('auth') }}" class="hero-login-btn">
+    <i class="fa-solid fa-right-to-bracket"></i> Login
+</a>
+{% endif %}
+
+<!-- Hero Section -->
+<section class="hero-section">
+    <!-- Left Text -->
+    <div class="hero-content">
+
+        <h1 class="hero-title">
+            <span class="highlight">AI Vehicle Damage</span>
+            Detection &amp; Cost Estimator
+        </h1>
+
+
+        <div class="hero-btns">
+            {% if session.user_id %}
+            <a href="{{ url_for('vehicle_register') }}" class="hbtn hbtn-primary" id="hero-scan-btn">
+                <i class="fa-solid fa-car-burst"></i> Register Vehicle &amp; Start AI Scan
+            </a>
+            <a href="{{ url_for('my_reports') }}" class="hbtn hbtn-outline" id="hero-reports-btn">
+                <i class="fa-solid fa-file-lines"></i> My Reports
+            </a>
+            {% else %}
+            <a href="{{ url_for('auth') }}" class="hbtn hbtn-primary" id="hero-getstarted-btn">
+                <i class="fa-solid fa-right-to-bracket"></i> Get Started / Login
+            </a>
+            <a href="{{ url_for('register') }}" class="hbtn hbtn-outline" id="hero-create-btn">
+                <i class="fa-solid fa-user-plus"></i> Create Account / Register
+            </a>
+            {% endif %}
+        </div>
+
+    </div>
+</section>
+
+<!-- Bottom Nav Pill (logged-in users) -->
+{% if session.user_id %}
+<nav style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:999;
+            background:rgba(10,18,35,0.75);border:1px solid rgba(59,130,246,0.3);
+            backdrop-filter:blur(14px);border-radius:50px;padding:0.55rem 1.5rem;
+            display:flex;gap:1.25rem;align-items:center;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+    <a href="{{ url_for('index') }}"
+        style="color:#38BDF8;font-size:0.85rem;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:0.4rem;">
+        <i class="fa-solid fa-house"></i> Home
+    </a>
+    <a href="{{ url_for('vehicle_register') }}"
+        style="color:#CBD5E1;font-size:0.85rem;font-weight:500;text-decoration:none;display:flex;align-items:center;gap:0.4rem;">
+        <i class="fa-solid fa-car-burst"></i> Register
+    </a>
+    <a href="{{ url_for('my_reports') }}"
+        style="color:#CBD5E1;font-size:0.85rem;font-weight:500;text-decoration:none;display:flex;align-items:center;gap:0.4rem;">
+        <i class="fa-solid fa-file-lines"></i> Reports
+    </a>
+    {% if session.role == 'admin' %}
+    <a href="{{ url_for('admin_dashboard') }}"
+        style="color:#A78BFA;font-size:0.85rem;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:0.4rem;">
+        <i class="fa-solid fa-user-shield"></i> Admin
+    </a>
+    {% endif %}
+    <div class="notif-wrapper" style="position:relative;">
+        <button type="button" class="notif-btn" id="homeNotifDropdownBtn" aria-label="Notifications"
+            style="background:none;border:none;color:#CBD5E1;font-size:1rem;cursor:pointer;padding:0 0.25rem;position:relative;display:flex;align-items:center;">
+            <i class="fa-solid fa-bell"></i>
+            {% if unread_notif_count and unread_notif_count > 0 %}
+            <span class="notif-badge" id="homeNotifBadge">{{ unread_notif_count }}</span>
+            {% endif %}
+        </button>
+        <div class="notif-dropdown notif-dropdown-bottom" id="homeNotifDropdown">
+            <div class="notif-header">
+                <h4><i class="fa-solid fa-bell" style="color:var(--primary);"></i> Notifications</h4>
+                {% if user_notifications %}
+                <button type="button" class="notif-clear-btn" id="homeMarkAllReadBtn">Mark all as read</button>
+                {% endif %}
+            </div>
+            <ul class="notif-list" id="notifList">
+                {% if user_notifications %}
+                {% for n in user_notifications %}
+                <li class="notif-item {% if not n.is_read %}unread{% endif %}">
+                    <div class="notif-icon notif-icon-{{ n.type }}">
+                        {% if n.type == 'success' %}<i class="fa-solid fa-circle-check"></i>
+                        {% elif n.type == 'warning' %}<i class="fa-solid fa-triangle-exclamation"></i>
+                        {% elif n.type == 'report' %}<i class="fa-solid fa-file-shield"></i>
+                        {% elif n.type == 'feedback' %}<i class="fa-solid fa-star"></i>
+                        {% else %}<i class="fa-solid fa-circle-info"></i>{% endif %}
+                    </div>
+                    <div class="notif-content">
+                        <div class="notif-title">{{ n.title }}</div>
+                        <div class="notif-text">{{ n.message }}</div>
+                        {% if n.link %}
+                        <a href="{{ n.link }}"
+                            style="font-size:0.725rem;color:var(--accent-cyan);display:inline-flex;align-items:center;gap:0.25rem;margin-top:0.3rem;text-decoration:none;font-weight:600;">
+                            View Details <i class="fa-solid fa-arrow-up-right-from-square"
+                                style="font-size:0.65rem;"></i>
+                        </a>
+                        {% endif %}
+                        <span class="notif-time">{{ n.created_at }}</span>
+                    </div>
+                </li>
+                {% endfor %}
+                {% else %}
+                <li class="notif-empty">
+                    <i class="fa-regular fa-bell-slash"
+                        style="font-size:1.6rem;margin-bottom:0.5rem;display:block;opacity:0.5;"></i>
+                    No notifications yet.
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    {% if session.role != 'admin' %}
+    <button type="button" onclick="openModal('globalFeedbackModal')"
+        style="background:none;border:none;color:#FCD34D;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:0.4rem;">
+        <i class="fa-solid fa-star"></i> Feedback
+    </button>
+    {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

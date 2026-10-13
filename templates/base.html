@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Vehicle Accident Damage Detection System{% endblock %}</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+    <!-- Apply theme before paint to avoid FOUC -->
+    <script>
+        (function(){
+            var saved = localStorage.getItem('agTheme') || 'dark';
+            var resolved = saved;
+            if (saved === 'auto') {
+                resolved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            }
+            document.documentElement.setAttribute('data-theme', resolved);
+        })();
+    </script>
+</head>
+<body>
+
+    <!-- Header & Navigation -->
+    <nav class="navbar">
+        <a href="{{ url_for('index') }}" class="brand-logo">
+            <i class="fa-solid fa-car-burst" style="color: var(--primary);"></i>
+            <span>AI powered <font color="#3B82F6">ADD & RCE</font></span>
+        </a>
+
+        <ul class="nav-links">
+            <li><a href="{{ url_for('index') }}" class="nav-link">Home</a></li>
+            {% if session.user_id %}
+                <li><a href="{{ url_for('vehicle_register') }}" class="nav-link">Vehicle Register</a></li>
+                <li><a href="{{ url_for('my_reports') }}" class="nav-link"><i class="fa-solid fa-file-lines" style="color: var(--primary);"></i> My Reports</a></li>
+                {% if session.role == 'admin' %}
+                    <li><a href="{{ url_for('admin_dashboard') }}" class="nav-link" style="color: var(--accent-cyan);"><i class="fa-solid fa-user-shield"></i> Admin Dashboard</a></li>
+                {% endif %}
+                
+                <!-- Notification Bell & Dropdown -->
+                <li class="notif-wrapper">
+                    <button type="button" class="notif-btn" id="notifDropdownBtn" aria-label="Notifications" title="Notifications">
+                        <i class="fa-solid fa-bell"></i>
+                        {% if unread_notif_count and unread_notif_count > 0 %}
+                            <span class="notif-badge" id="notifBadge">{{ unread_notif_count }}</span>
+                        {% endif %}
+                    </button>
+                    <div class="notif-dropdown" id="notifDropdown">
+                        <div class="notif-header">
+                            <h4><i class="fa-solid fa-bell" style="color: var(--primary);"></i> Notifications</h4>
+                            {% if user_notifications %}
+                                <button type="button" class="notif-clear-btn" id="markAllReadBtn">Mark all as read</button>
+                            {% endif %}
+                        </div>
+                        <ul class="notif-list" id="notifList">
+                            {% if user_notifications %}
+                                {% for n in user_notifications %}
+                                    <li class="notif-item {% if not n.is_read %}unread{% endif %}">
+                                        <div class="notif-icon notif-icon-{{ n.type }}">
+                                            {% if n.type == 'success' %}
+                                                <i class="fa-solid fa-circle-check"></i>
+                                            {% elif n.type == 'warning' %}
+                                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                            {% elif n.type == 'report' %}
+                                                <i class="fa-solid fa-file-shield"></i>
+                                            {% elif n.type == 'feedback' %}
+                                                <i class="fa-solid fa-star"></i>
+                                            {% else %}
+                                                <i class="fa-solid fa-circle-info"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="notif-content">
+                                            <div class="notif-title">{{ n.title }}</div>
+                                            <div class="notif-text">{{ n.message }}</div>
+                                            {% if n.link %}
+                                                <a href="{{ n.link }}" style="font-size: 0.725rem; color: var(--accent-cyan); display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.3rem; text-decoration: none; font-weight: 600;">
+                                                    View Details <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.65rem;"></i>
+                                                </a>
+                                            {% endif %}
+                                            <span class="notif-time">{{ n.created_at }}</span>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            {% else %}
+                                <li class="notif-empty">
+                                    <i class="fa-regular fa-bell-slash" style="font-size: 1.6rem; margin-bottom: 0.5rem; display: block; opacity: 0.5;"></i>
+                                    No notifications yet.
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </li>
+
+                <!-- Global Feedback Action Button -->
+                {% if session.role != 'admin' %}
+                <li>
+                    <button type="button" onclick="openModal('globalFeedbackModal')" class="btn-custom btn-secondary" style="padding: 0.4rem 0.85rem; font-size: 0.85rem; border-color: rgba(245, 158, 11, 0.4); color: #FBBF24;">
+                        <i class="fa-solid fa-star" style="color: #F59E0B;"></i> Feedback
+                    </button>
+                </li>
+                {% endif %}
+
+                <li>
+                    <span style="font-size: 0.875rem; color: var(--text-muted);">
+                        <i class="fa-regular fa-circle-user"></i> {{ session.name }} ({{ session.role|capitalize }})
+                    </span>
+                </li>
+                <li><a href="{{ url_for('logout') }}" class="btn-custom btn-secondary" style="padding: 0.4rem 0.9rem; font-size: 0.85rem;"><i class="fa-solid fa-right-from-bracket"></i> Logout</a></li>
+            {% else %}
+                <li><a href="{{ url_for('auth') }}" class="btn-custom btn-primary"><i class="fa-solid fa-right-to-bracket"></i> Login / Register</a></li>
+            {% endif %}
+
+            <!-- Theme Toggle -->
+            <li class="theme-toggle-wrapper" id="themeToggleWrapper">
+                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Switch theme">
+                    <i class="fa-solid fa-display" id="themeIcon"></i>
+                    <span id="themeLabel">Auto</span>
+                    <i class="fa-solid fa-chevron-down" style="font-size:0.65rem; opacity:0.7;"></i>
+                </button>
+                <div class="theme-dropdown" id="themeDropdown">
+                    <button class="theme-option" id="optDark" onclick="setTheme('dark')">
+                        <i class="fa-solid fa-moon"></i> Dark
+                    </button>
+                    <button class="theme-option" id="optLight" onclick="setTheme('light')">
+                        <i class="fa-solid fa-sun"></i> Light
+                    </button>
+                    <button class="theme-option" id="optAuto" onclick="setTheme('auto')">
+                        <i class="fa-solid fa-display"></i> Auto
+                    </button>
+                </div>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content Wrapper -->
+    <div class="main-wrapper">
+        <!-- Toast Flash Notifications -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <i class="fa-solid fa-circle-info"></i> {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Global User Feedback & Rating Modal -->
+    {% if session.user_id and session.role != 'admin' %}
+    <div id="globalFeedbackModal" class="modal-backdrop">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fa-solid fa-star" style="color: #F59E0B;"></i> Rate System & Share Feedback
+                </h3>
+                <button class="modal-close" onclick="closeModal('globalFeedbackModal')">&times;</button>
+            </div>
+            <form action="{{ url_for('submit_feedback') }}" method="POST">
+                <div class="form-group info-box-bg" style="text-align: center; margin-bottom: 1.5rem; padding: 1.25rem; border-radius: var(--radius-md);">
+                    <label class="form-label" style="margin-bottom: 0.75rem; font-size: 0.95rem; color: var(--text-main);">
+                        Your Star Rating
+                    </label>
+                    <div class="star-rating">
+                        <input type="radio" id="gstar5" name="rating" value="5" checked /><label for="gstar5" title="5 stars"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="gstar4" name="rating" value="4" /><label for="gstar4" title="4 stars"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="gstar3" name="rating" value="3" /><label for="gstar3" title="3 stars"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="gstar2" name="rating" value="2" /><label for="gstar2" title="2 stars"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="gstar1" name="rating" value="1" /><label for="gstar1" title="1 star"><i class="fa-solid fa-star"></i></label>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem;">Tap a star to rate from 1 to 5 stars</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-control" required>
+                        <option value="AI Accuracy">AI Damage Detection Accuracy</option>
+                        <option value="Cost Estimation">Repair Cost Estimation & Rates</option>
+                        <option value="UI Experience">User Experience & Platform Speed</option>
+                        <option value="PDF Reports">Inspection PDF & Certification</option>
+                        <option value="General">General Platform Feedback</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Your Review & Comments</label>
+                    <textarea name="comments" class="form-control" rows="4" placeholder="Share your experience, accuracy of AI detection, or suggestions for improvement..." required></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-custom btn-secondary" onclick="closeModal('globalFeedbackModal')">Cancel</button>
+                    <button type="submit" class="btn-custom btn-primary">
+                        <i class="fa-solid fa-paper-plane"></i> Submit Feedback
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Chart.js & Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Global Modal Helpers
+        function openModal(modalId) {
+            const m = document.getElementById(modalId);
+            if (m) m.classList.add('show');
+        }
+
+        function closeModal(modalId) {
+            const m = document.getElementById(modalId);
+            if (m) m.classList.remove('show');
+        }
+
+        // Notification Dropdown Toggle & Mark All Read
+        document.addEventListener('DOMContentLoaded', function() {
+            // Notification toggle buttons (both top navbar and bottom home nav pill)
+            document.querySelectorAll('.notif-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const wrapper = this.closest('.notif-wrapper');
+                    if (wrapper) {
+                        const dropdown = wrapper.querySelector('.notif-dropdown');
+                        if (dropdown) {
+                            const isShown = dropdown.classList.contains('show');
+                            document.querySelectorAll('.notif-dropdown').forEach(function(d) {
+                                d.classList.remove('show');
+                            });
+                            if (!isShown) {
+                                dropdown.classList.add('show');
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Close notification dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.notif-wrapper')) {
+                    document.querySelectorAll('.notif-dropdown').forEach(function(d) {
+                        d.classList.remove('show');
+                    });
+                }
+            });
+
+            // Mark all read button handlers
+            document.querySelectorAll('.notif-clear-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    fetch("{{ url_for('mark_notifications_read') }}", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                    .then(function(res) { return res.json(); })
+                    .then(function(data) {
+                        if (data.success) {
+                            document.querySelectorAll('.notif-badge').forEach(function(b) {
+                                b.style.display = 'none';
+                            });
+                            document.querySelectorAll('.notif-item.unread').forEach(function(item) {
+                                item.classList.remove('unread');
+                            });
+                            document.querySelectorAll('.notif-clear-btn').forEach(function(b) {
+                                b.style.display = 'none';
+                            });
+                        }
+                    })
+                    .catch(function(err) { console.error("Error marking notifications read:", err); });
+                });
+            });
+
+            // Close modals when clicking backdrop
+            window.addEventListener('click', function(e) {
+                if (e.target.classList.contains('modal-backdrop')) {
+                    e.target.classList.remove('show');
+                }
+            });
+        });
+
+        // ── Theme Toggle Logic ──
+        var ICONS = { dark: 'fa-moon', light: 'fa-sun', auto: 'fa-display' };
+        var LABELS = { dark: 'Dark', light: 'Light', auto: 'Auto' };
+
+        function applyTheme(mode) {
+            var resolved = mode;
+            if (mode === 'auto') {
+                resolved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            }
+            document.documentElement.setAttribute('data-theme', resolved);
+        }
+
+        function updateToggleUI(mode) {
+            var icon = document.getElementById('themeIcon');
+            var label = document.getElementById('themeLabel');
+            if (icon) {
+                icon.className = 'fa-solid ' + (ICONS[mode] || 'fa-display');
+            }
+            if (label) label.textContent = LABELS[mode] || 'Auto';
+            ['dark','light','auto'].forEach(function(m) {
+                var el = document.getElementById('opt' + m.charAt(0).toUpperCase() + m.slice(1));
+                if (el) el.classList.toggle('active', m === mode);
+            });
+        }
+
+        function setTheme(mode) {
+            localStorage.setItem('agTheme', mode);
+            applyTheme(mode);
+            updateToggleUI(mode);
+            closeThemeDropdown();
+        }
+
+        function closeThemeDropdown() {
+            var dd = document.getElementById('themeDropdown');
+            if (dd) dd.classList.remove('open');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var saved = localStorage.getItem('agTheme') || 'dark';
+            applyTheme(saved);
+            updateToggleUI(saved);
+
+            var btn = document.getElementById('themeToggleBtn');
+            var dd  = document.getElementById('themeDropdown');
+            if (btn && dd) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    dd.classList.toggle('open');
+                });
+            }
+
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('#themeToggleWrapper')) {
+                    closeThemeDropdown();
+                }
+            });
+
+            // React to OS preference changes when in Auto mode
+            window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function() {
+                if ((localStorage.getItem('agTheme') || 'dark') === 'auto') {
+                    applyTheme('auto');
+                }
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

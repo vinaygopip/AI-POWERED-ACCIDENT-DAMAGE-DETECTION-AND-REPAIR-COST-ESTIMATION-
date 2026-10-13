@@ -1,0 +1,535 @@
+{% extends "base.html" %}
+
+{% block title %}Multi-Angle Upload - AccidentAI{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Upload Slot ── */
+    .upload-slot {
+        background: rgba(15, 23, 42, 0.55);
+        border: 1.5px dashed var(--border-glow);
+        border-radius: var(--radius-md);
+        padding: 1.1rem;
+        transition: border-color 0.25s;
+    }
+    .upload-slot:hover { border-color: var(--primary); }
+
+    .image-preview-box {
+        border-radius: 8px;
+        overflow: hidden;
+        cursor: pointer;
+        position: relative;
+        transition: box-shadow 0.2s;
+    }
+
+    /* ── Camera / action row ── */
+    .slot-action-row {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.6rem;
+    }
+    .slot-action-row label,
+    .slot-action-row button {
+        flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        padding: 0.45rem 0.5rem;
+        border-radius: 7px;
+        font-size: 0.77rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid var(--border-glow);
+        background: rgba(59,130,246,0.08);
+        color: var(--text-muted);
+        transition: background 0.2s, color 0.2s, border-color 0.2s;
+        font-family: 'Inter', sans-serif;
+    }
+    .slot-action-row label:hover,
+    .slot-action-row button:hover {
+        background: rgba(59,130,246,0.2);
+        color: var(--text-main);
+        border-color: var(--primary);
+    }
+    .slot-action-row label.cam-btn {
+        border-color: rgba(6,182,212,0.4);
+        background: rgba(6,182,212,0.07);
+        color: var(--accent-cyan);
+    }
+    .slot-action-row label.cam-btn:hover {
+        background: rgba(6,182,212,0.18);
+        color: #fff;
+    }
+
+    /* ── Camera Modal ── */
+    #cameraModal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.88);
+        z-index: 10000;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    #cameraModal.open { display: flex; }
+    #cameraModal video {
+        border-radius: 12px;
+        max-width: 90vw;
+        max-height: 60vh;
+        border: 2px solid var(--accent-cyan);
+        background: #000;
+    }
+    .cam-modal-btns {
+        display: flex;
+        gap: 1rem;
+    }
+    .cam-snap-btn {
+        background: var(--accent-cyan);
+        color: #000;
+        font-weight: 700;
+        padding: 0.65rem 1.75rem;
+        border-radius: 8px;
+        border: none;
+        font-size: 0.95rem;
+        cursor: pointer;
+        font-family: 'Inter', sans-serif;
+        display: flex; align-items: center; gap: 0.5rem;
+        transition: background 0.2s;
+    }
+    .cam-snap-btn:hover { background: #22D3EE; }
+    .cam-close-btn {
+        background: rgba(239,68,68,0.2);
+        color: #EF4444;
+        font-weight: 600;
+        padding: 0.65rem 1.4rem;
+        border-radius: 8px;
+        border: 1px solid rgba(239,68,68,0.4);
+        font-size: 0.9rem;
+        cursor: pointer;
+        font-family: 'Inter', sans-serif;
+    }
+    canvas#cameraCanvas { display: none; }
+
+    /* ── 360 Video Section ── */
+    .video360-section {
+        margin-top: 1.75rem;
+        border: 1.5px dashed rgba(139,92,246,0.4);
+        border-radius: var(--radius-md);
+        padding: 1.5rem 1.5rem 1.25rem;
+        background: rgba(139,92,246,0.04);
+        transition: border-color 0.25s;
+    }
+    .video360-section:hover { border-color: var(--accent-purple); }
+    .video360-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    .badge-optional {
+        background: rgba(139,92,246,0.15);
+        color: var(--accent-purple);
+        border: 1px solid rgba(139,92,246,0.35);
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.18rem 0.55rem;
+        border-radius: 50px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+    .video360-preview {
+        width: 100%;
+        border-radius: 10px;
+        margin-top: 0.85rem;
+        display: none;
+        max-height: 260px;
+        object-fit: cover;
+        border: 1px solid rgba(139,92,246,0.3);
+    }
+    .video360-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .v360-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 1.1rem;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: 'Inter', sans-serif;
+        transition: background 0.2s, color 0.2s;
+    }
+    .v360-upload-label {
+        background: rgba(139,92,246,0.12);
+        color: var(--accent-purple);
+        border: 1px solid rgba(139,92,246,0.4);
+    }
+    .v360-upload-label:hover { background: rgba(139,92,246,0.25); color: #fff; }
+    .v360-record-btn {
+        background: rgba(239,68,68,0.1);
+        color: #F87171;
+        border: 1px solid rgba(239,68,68,0.35);
+    }
+    .v360-record-btn:hover { background: rgba(239,68,68,0.22); color: #fff; }
+    .v360-record-btn.recording {
+        background: rgba(239,68,68,0.3);
+        color: #fff;
+        animation: pulse360 1s infinite;
+    }
+    @keyframes pulse360 {
+        0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+        50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 960px; margin: 2rem auto;">
+    <div class="glass-card" style="padding: 2.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-card); padding-bottom: 1rem;">
+            <div>
+                <h2 style="font-size: 1.6rem; color: var(--text-main); display: flex; align-items: center; gap: 0.75rem;">
+                    <i class="fa-solid fa-camera" style="color: var(--primary);"></i> Upload Vehicle Damage Images
+                </h2>
+                <p style="color: var(--text-muted); font-size: 0.925rem; margin-top: 0.25rem;">
+                    Target Vehicle: <strong style="color: var(--accent-cyan);">{{ vehicle.car_brand }} {{ vehicle.model }}</strong> (VIN: {{ vehicle.vin_number }})
+                </p>
+            </div>
+            <span class="badge-severity badge-minor"><i class="fa-solid fa-check-double"></i> Ready for AI Scan</span>
+        </div>
+
+        <form action="{{ url_for('upload_images', vehicle_id=vehicle.vehicle_id) }}" method="POST" enctype="multipart/form-data" id="uploadForm">
+
+            <!-- ── 3-Image Grid ── -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+
+                <!-- Front View -->
+                <div class="upload-slot">
+                    <div style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.25rem; color: var(--text-main);">
+                        <i class="fa-solid fa-car-side" style="color: var(--primary);"></i> Front View
+                    </div>
+                    <p style="font-size: 0.775rem; color: var(--text-dim); margin-bottom: 0.75rem;">Bonnet, Bumper, Headlights</p>
+
+                    <div id="front_preview" class="image-preview-box" style="height: 140px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4);">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.25rem; color: var(--primary); opacity: 0.7;"></i>
+                    </div>
+                    <input type="file" id="front_image" name="front_image" accept="image/*" style="display:none;" onchange="previewImage(this, 'front_preview')">
+                    <!-- hidden camera capture input (mobile) -->
+                    <input type="file" id="front_cam" accept="image/*" capture="environment" style="display:none;" onchange="previewImageFromCam(this, 'front_image', 'front_preview')">
+
+                    <div class="slot-action-row">
+                        <label for="front_image" title="Upload from gallery">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Upload
+                        </label>
+                        <label class="cam-btn" id="front_cam_trigger" title="Take photo" onclick="openCamera('front')">
+                            <i class="fa-solid fa-camera"></i> Capture
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Rear View -->
+                <div class="upload-slot">
+                    <div style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.25rem; color: var(--text-main);">
+                        <i class="fa-solid fa-car-rear" style="color: var(--primary);"></i> Rear View
+                    </div>
+                    <p style="font-size: 0.775rem; color: var(--text-dim); margin-bottom: 0.75rem;">Dickey, Rear Bumper, Taillights</p>
+
+                    <div id="rear_preview" class="image-preview-box" style="height: 140px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4);">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.25rem; color: var(--primary); opacity: 0.7;"></i>
+                    </div>
+                    <input type="file" id="rear_image" name="rear_image" accept="image/*" style="display:none;" onchange="previewImage(this, 'rear_preview')">
+                    <input type="file" id="rear_cam" accept="image/*" capture="environment" style="display:none;" onchange="previewImageFromCam(this, 'rear_image', 'rear_preview')">
+
+                    <div class="slot-action-row">
+                        <label for="rear_image" title="Upload from gallery">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Upload
+                        </label>
+                        <label class="cam-btn" id="rear_cam_trigger" title="Take photo" onclick="openCamera('rear')">
+                            <i class="fa-solid fa-camera"></i> Capture
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Side View -->
+                <div class="upload-slot">
+                    <div style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.25rem; color: var(--text-main);">
+                        <i class="fa-solid fa-car" style="color: var(--primary);"></i> Side View
+                    </div>
+                    <p style="font-size: 0.775rem; color: var(--text-dim); margin-bottom: 0.75rem;">Doors, Fender, Side Panels</p>
+
+                    <div id="side_preview" class="image-preview-box" style="height: 140px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4);">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.25rem; color: var(--primary); opacity: 0.7;"></i>
+                    </div>
+                    <input type="file" id="side_image" name="side_image" accept="image/*" style="display:none;" onchange="previewImage(this, 'side_preview')">
+                    <input type="file" id="side_cam" accept="image/*" capture="environment" style="display:none;" onchange="previewImageFromCam(this, 'side_image', 'side_preview')">
+
+                    <div class="slot-action-row">
+                        <label for="side_image" title="Upload from gallery">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Upload
+                        </label>
+                        <label class="cam-btn" id="side_cam_trigger" title="Take photo" onclick="openCamera('side')">
+                            <i class="fa-solid fa-camera"></i> Capture
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 360° Video (Optional) ── -->
+            <div class="video360-section">
+                <div class="video360-header">
+                    <i class="fa-solid fa-360-degrees" style="font-size: 1.3rem; color: var(--accent-purple);"></i>
+                    <div>
+                        <span style="font-size: 1rem; font-weight: 700; color: var(--text-main);">360° Vehicle Walkthrough Video</span>
+                        <span class="badge-optional" style="margin-left: 0.5rem;">Optional</span>
+                    </div>
+                </div>
+                <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.55;">
+                    Walk around the vehicle slowly while recording to capture all damage angles. Helps AI detect hidden or overlooked damage. Supports MP4, MOV, WebM.
+                </p>
+
+                <!-- hidden file input -->
+                <input type="file" id="video360_file" name="video_360" accept="video/*" style="display:none;" onchange="preview360Video(this)">
+
+                <div class="video360-actions">
+                    <label for="video360_file" class="v360-btn v360-upload-label" title="Upload existing 360 video">
+                        <i class="fa-solid fa-file-video"></i> Upload 360° Video
+                    </label>
+                    <button type="button" class="v360-btn v360-record-btn" id="recordBtn" onclick="toggle360Recording()" title="Record live 360 video">
+                        <i class="fa-solid fa-circle-dot" id="recordIcon"></i>
+                        <span id="recordLabel">Record Live</span>
+                    </button>
+                    <button type="button" class="v360-btn" id="stopRecordBtn"
+                        style="display:none; background:rgba(251,191,36,0.1); color:#FCD34D; border:1px solid rgba(251,191,36,0.35);"
+                        onclick="stop360Recording()">
+                        <i class="fa-solid fa-stop"></i> Stop & Save
+                    </button>
+                </div>
+
+                <!-- 360 video preview -->
+                <video id="video360_preview" class="video360-preview" controls></video>
+                <!-- Live recording preview (muted) -->
+                <video id="video360_live" class="video360-preview" autoplay muted playsinline
+                    style="display:none; border-color: rgba(239,68,68,0.5);"></video>
+                <p id="video360_name" style="font-size: 0.78rem; color: var(--accent-purple); margin-top: 0.5rem; display:none;"></p>
+            </div>
+
+            <!-- ── OpenCV Notice ── -->
+            <div class="info-box-bg" style="padding: 1.25rem; border-radius: var(--radius-md); margin-top: 1.75rem; margin-bottom: 2rem; font-size: 0.875rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fa-solid fa-shield-cat" style="font-size: 1.5rem; color: var(--accent-cyan);"></i>
+                <div>
+                    <strong style="color: var(--text-main);">OpenCV Image Validation:</strong> System checks uploaded photo format (JPG/PNG), minimum resolution, and blurriness using OpenCV Laplacian variance.
+                </div>
+            </div>
+
+            <button type="submit" class="btn-custom btn-primary" style="width: 100%; font-size: 1.05rem; padding: 0.9rem;">
+                <i class="fa-solid fa-bolt"></i> Run AI Processing &amp; Damage Detection
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- ── Camera Capture Modal (desktop) ── -->
+<div id="cameraModal">
+    <p style="color: var(--accent-cyan); font-weight: 700; font-size: 1rem; margin-bottom: 0.25rem;">
+        <i class="fa-solid fa-camera"></i> <span id="camModalTitle">Camera Preview</span>
+    </p>
+    <video id="cameraStream" autoplay playsinline></video>
+    <canvas id="cameraCanvas"></canvas>
+    <div class="cam-modal-btns">
+        <button class="cam-snap-btn" onclick="snapPhoto()">
+            <i class="fa-solid fa-camera-rotate"></i> Take Photo
+        </button>
+        <button class="cam-close-btn" onclick="closeCamera()">
+            <i class="fa-solid fa-xmark"></i> Cancel
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ══════════════════════════════════════
+   IMAGE PREVIEW (file upload)
+══════════════════════════════════════ */
+function previewImage(input, previewId) {
+    const box = document.getElementById(previewId);
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            box.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+/* Copy camera capture file into the real input & preview */
+function previewImageFromCam(camInput, realInputId, previewId) {
+    if (!camInput.files || !camInput.files[0]) return;
+    const dt = new DataTransfer();
+    dt.items.add(camInput.files[0]);
+    const realInput = document.getElementById(realInputId);
+    realInput.files = dt.files;
+    previewImage(realInput, previewId);
+}
+
+/* ══════════════════════════════════════
+   CAMERA CAPTURE MODAL (desktop / fallback)
+══════════════════════════════════════ */
+let currentSlot = null;
+let mediaStream  = null;
+
+function openCamera(slot) {
+    /* On mobile, just trigger the native camera input */
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    if (isMobile) {
+        document.getElementById(slot + '_cam').click();
+        return;
+    }
+    /* Desktop: open modal with getUserMedia */
+    currentSlot = slot;
+    const slotNames = { front: 'Front View', rear: 'Rear View', side: 'Side View' };
+    document.getElementById('camModalTitle').textContent = slotNames[slot] + ' — Camera';
+    document.getElementById('cameraModal').classList.add('open');
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+        .then(stream => {
+            mediaStream = stream;
+            const video = document.getElementById('cameraStream');
+            video.srcObject = stream;
+        })
+        .catch(err => {
+            alert('Camera access denied or unavailable. Please upload a photo instead.\n' + err.message);
+            closeCamera();
+        });
+}
+
+function snapPhoto() {
+    const video  = document.getElementById('cameraStream');
+    const canvas = document.getElementById('cameraCanvas');
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+
+    canvas.toBlob(blob => {
+        const file = new File([blob], `${currentSlot}_capture.jpg`, { type: 'image/jpeg' });
+        const dt = new DataTransfer();
+        dt.items.add(file);
+
+        const realInput = document.getElementById(currentSlot + '_image');
+        realInput.files = dt.files;
+
+        const box = document.getElementById(currentSlot + '_preview');
+        box.innerHTML = `<img src="${canvas.toDataURL()}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`;
+
+        closeCamera();
+    }, 'image/jpeg', 0.92);
+}
+
+function closeCamera() {
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop());
+        mediaStream = null;
+    }
+    document.getElementById('cameraModal').classList.remove('open');
+}
+
+/* ══════════════════════════════════════
+   360° VIDEO — Upload preview
+══════════════════════════════════════ */
+function preview360Video(input) {
+    if (!input.files || !input.files[0]) return;
+    const file   = input.files[0];
+    const url    = URL.createObjectURL(file);
+    const prev   = document.getElementById('video360_preview');
+    const live   = document.getElementById('video360_live');
+    const nameEl = document.getElementById('video360_name');
+
+    live.style.display = 'none';
+    prev.src = url;
+    prev.style.display = 'block';
+    nameEl.textContent = '📁 ' + file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+    nameEl.style.display = 'block';
+}
+
+/* ══════════════════════════════════════
+   360° VIDEO — Live recording
+══════════════════════════════════════ */
+let mediaRecorder = null;
+let recordedChunks = [];
+let videoStream360 = null;
+
+function toggle360Recording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') return;
+    recordedChunks = [];
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+        .then(stream => {
+            videoStream360 = stream;
+            const live = document.getElementById('video360_live');
+            live.srcObject = stream;
+            live.style.display = 'block';
+
+            mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
+            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+            mediaRecorder.onstop = saveRecording;
+            mediaRecorder.start(200);
+
+            document.getElementById('recordBtn').classList.add('recording');
+            document.getElementById('recordLabel').textContent = 'Recording…';
+            document.getElementById('recordIcon').className = 'fa-solid fa-circle-dot fa-beat';
+            document.getElementById('stopRecordBtn').style.display = 'inline-flex';
+        })
+        .catch(err => alert('Camera/microphone access denied.\n' + err.message));
+}
+
+function stop360Recording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    if (videoStream360) { videoStream360.getTracks().forEach(t => t.stop()); videoStream360 = null; }
+    document.getElementById('video360_live').style.display = 'none';
+    document.getElementById('recordBtn').classList.remove('recording');
+    document.getElementById('recordLabel').textContent = 'Record Live';
+    document.getElementById('recordIcon').className = 'fa-solid fa-circle-dot';
+    document.getElementById('stopRecordBtn').style.display = 'none';
+}
+
+function saveRecording() {
+    const mimeType = getSupportedMimeType();
+    const ext = mimeType.includes('webm') ? 'webm' : 'mp4';
+    const blob = new Blob(recordedChunks, { type: mimeType });
+    const url  = URL.createObjectURL(blob);
+
+    /* Inject into the file input */
+    const file = new File([blob], `360_recording.${ext}`, { type: mimeType });
+    const dt   = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('video360_file').files = dt.files;
+
+    /* Show preview */
+    const prev   = document.getElementById('video360_preview');
+    const nameEl = document.getElementById('video360_name');
+    prev.src = url;
+    prev.style.display = 'block';
+    nameEl.textContent = `🎥 Recorded 360° video (${(blob.size/1024/1024).toFixed(1)} MB)`;
+    nameEl.style.display = 'block';
+}
+
+function getSupportedMimeType() {
+    const types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+    for (const t of types) { if (MediaRecorder.isTypeSupported(t)) return t; }
+    return '';
+}
+
+/* Close camera modal on backdrop click */
+document.getElementById('cameraModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCamera();
+});
+</script>
+{% endblock %}

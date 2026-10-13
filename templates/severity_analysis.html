@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Severity & Cost Analysis - AccidentAI{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
+    <div>
+        <h2 style="font-size: 1.75rem; color: var(--text-main); display: flex; align-items: center; gap: 0.75rem;">
+            <i class="fa-solid fa-microchip" style="color: var(--primary);"></i> AI Inspection Results: <span style="color: var(--accent-cyan);">{{ report.report_id }}</span>
+        </h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem;">
+            Vehicle: <strong>{{ vehicle.car_brand }} {{ vehicle.model }}</strong> | VIN: <strong>{{ vehicle.vin_number }}</strong>
+        </p>
+    </div>
+    
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
+        {% if report.payment_status == 'Paid' %}
+            <a href="{{ url_for('payment_page', report_id=report.report_id) }}" class="btn-custom" style="background: linear-gradient(135deg, #10B981, #059669); color: #fff; padding: 0.75rem 1.4rem; font-weight: 700;">
+                <i class="fa-solid fa-receipt"></i> Paid - View Receipt
+            </a>
+        {% else %}
+            <a href="{{ url_for('payment_page', report_id=report.report_id) }}" class="btn-custom" style="background: linear-gradient(135deg, #3B82F6, #1D4ED8); color: #fff; padding: 0.75rem 1.4rem; font-weight: 700;">
+                <i class="fa-solid fa-credit-card"></i> Pay Repair Cost (Rs. {{ "%.2f"|format(report.total_cost) }})
+            </a>
+        {% endif %}
+        <a href="{{ url_for('report_view', report_id=report.report_id) }}" class="btn-custom btn-primary" style="padding: 0.75rem 1.4rem;">
+            <i class="fa-solid fa-file-pdf"></i> View & Download PDF Report
+        </a>
+    </div>
+</div>
+
+<!-- Severity Index Banner -->
+<div class="glass-card severity-banner-{{ report.severity_level|lower if report.severity_level else 'minor' }}" style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; padding: 1.75rem 2.25rem;">
+    <div>
+        <div style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Overall Damage Severity Rating</div>
+        <div style="font-size: 2.1rem; font-weight: 800; margin-top: 0.35rem;">
+            {% if report.severity_level == 'Severe' %}
+                <span style="color: var(--severity-severe); display: flex; align-items: center; gap: 0.6rem;"><i class="fa-solid fa-circle-exclamation"></i> SEVERE DAMAGE</span>
+            {% elif report.severity_level == 'Moderate' %}
+                <span style="color: var(--severity-moderate); display: flex; align-items: center; gap: 0.6rem;"><i class="fa-solid fa-triangle-exclamation"></i> MODERATE DAMAGE</span>
+            {% else %}
+                <span style="color: var(--severity-minor); display: flex; align-items: center; gap: 0.6rem;"><i class="fa-solid fa-circle-check"></i> MINOR DAMAGE</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="text-align: right;">
+        <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Estimated Completion Duration</div>
+        <div style="font-size: 1.6rem; font-weight: 800; color: var(--accent-cyan); margin-top: 0.25rem;">
+            <i class="fa-regular fa-clock"></i> {{ report.repair_time_hours }} Hours (~{{ (report.repair_time_hours / 6)|round(1) }} Days)
+        </div>
+    </div>
+</div>
+
+<!-- Annotated Images & Detections Grid -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+    <!-- Left Column: Visual Bounding Boxes -->
+    <div class="glass-card" style="padding: 1.75rem;">
+        <h3 style="font-size: 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem;">
+            <i class="fa-solid fa-eye" style="color: var(--accent-cyan);"></i> YOLOv8 Object Bounding Detections
+        </h3>
+
+        {% if images %}
+            {% for img in images %}
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600;">
+                        <span><i class="fa-solid fa-camera-retro" style="color: var(--primary);"></i> {{ img.view_type }} View Inspection</span>
+                        <span style="color: var(--accent-cyan); font-size: 0.8rem;"><i class="fa-solid fa-check"></i> OpenCV Validated</span>
+                    </div>
+                    <div class="image-preview-box">
+                        <img src="{{ url_for('static', filename='uploads/' + img.annotated_filename) }}" alt="{{ img.view_type }} Detection">
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Cost Breakdown -->
+    <div class="glass-card" style="padding: 1.75rem;">
+        <h3 style="font-size: 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem;">
+            <i class="fa-solid fa-calculator" style="color: var(--primary);"></i> Cost Estimation Breakdown
+        </h3>
+
+        <div class="info-box-bg" style="padding: 1.35rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; color: var(--text-muted); font-size: 0.925rem;">
+                <span>Total Parts Replacement / Repair:</span>
+                <span style="color: var(--text-main); font-weight: 600;">Rs. {{ "%.2f"|format(report.total_parts_cost) }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; color: var(--text-muted); font-size: 0.925rem;">
+                <span>Total Labour Charges:</span>
+                <span style="color: var(--text-main); font-weight: 600;">Rs. {{ "%.2f"|format(report.total_labour_cost) }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; color: var(--text-muted); font-size: 0.925rem;">
+                <span>Total Paint & Refinishing:</span>
+                <span style="color: var(--text-main); font-weight: 600;">Rs. {{ "%.2f"|format(report.total_paint_cost) }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; color: var(--text-muted); font-size: 0.925rem;">
+                <span>Applicable GST Tax (18%):</span>
+                <span style="color: var(--text-main); font-weight: 600;">Rs. {{ "%.2f"|format(report.tax_amount) }}</span>
+            </div>
+            <hr style="border-color: var(--border-card); margin: 0.85rem 0;">
+            <div style="display: flex; justify-content: space-between; font-size: 1.3rem; font-weight: 800; color: var(--primary);">
+                <span>TOTAL ESTIMATED COST:</span>
+                <span>Rs. {{ "%.2f"|format(report.total_cost) }}</span>
+            </div>
+
+            <div style="margin-top: 1rem;">
+                {% if report.payment_status == 'Paid' %}
+                    <a href="{{ url_for('payment_page', report_id=report.report_id) }}" class="btn-custom" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #10B981, #059669); color: #fff; font-weight: 700; padding: 0.85rem;">
+                        <i class="fa-solid fa-receipt"></i> Payment Completed - View Receipt
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('payment_page', report_id=report.report_id) }}" class="btn-custom" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #3B82F6, #1D4ED8); color: #fff; font-weight: 700; padding: 0.85rem;">
+                        <i class="fa-solid fa-credit-card"></i> Proceed to Pay Repair Estimate
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <h4 style="font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-muted); font-weight: 600;">Detected Damaged Parts Matrix</h4>
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Part Name</th>
+                        <th>Damage Type</th>
+                        <th>Severity</th>
+                        <th>Confidence</th>
+                        <th>Est. Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in detections %}
+                        <tr>
+                            <td style="font-weight: 700; color: var(--text-main);">{{ d.part_name }}</td>
+                            <td>{{ d.damage_type }}</td>
+                            <td>
+                                {% if d.severity == 'Severe' %}
+                                    <span class="badge-severity badge-severe">Severe</span>
+                                {% elif d.severity == 'Moderate' %}
+                                    <span class="badge-severity badge-moderate">Moderate</span>
+                                {% else %}
+                                    <span class="badge-severity badge-minor">Minor</span>
+                                {% endif %}
+                            </td>
+                            <td><span style="color: var(--accent-cyan); font-weight: 600;">{{ d.confidence }}%</span></td>
+                            <td style="font-weight: 700;">Rs. {{ "%.2f"|format(d.part_cost) }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

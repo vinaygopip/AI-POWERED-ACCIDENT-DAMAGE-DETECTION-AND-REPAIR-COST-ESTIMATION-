@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}AI Inspection Certificate & PDF Report - {{ report.report_id }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 920px; margin: 2rem auto;">
+    <!-- Action Bar -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
+        <a href="{{ url_for('severity_analysis', report_id=report.report_id) }}" class="btn-custom btn-secondary">
+            <i class="fa-solid fa-arrow-left"></i> Back to Detection View
+        </a>
+
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            {% if report.payment_status == 'Paid' %}
+                <a href="{{ url_for('payment_page', report_id=report.report_id) }}" class="btn-custom" style="background: linear-gradient(135deg, #10B981, #059669); color: #fff; font-weight: 700;">
+                    <i class="fa-solid fa-receipt"></i> Paid - View Receipt
+                </a>
+            {% else %}
+                <a href="{{ url_for('payment_page', report_id=report.report_id) }}" class="btn-custom" style="background: linear-gradient(135deg, #3B82F6, #1D4ED8); color: #fff; font-weight: 700;">
+                    <i class="fa-solid fa-credit-card"></i> Pay Repair Cost (Rs. {{ "%.2f"|format(report.total_cost) }})
+                </a>
+            {% endif %}
+
+            <button onclick="window.print();" class="btn-custom btn-secondary">
+                <i class="fa-solid fa-print"></i> Print Report
+            </button>
+            <a href="{{ url_for('download_pdf_report', report_id=report.report_id) }}" class="btn-custom btn-primary">
+                <i class="fa-solid fa-file-pdf"></i> Download Official PDF
+            </a>
+        </div>
+    </div>
+
+    <!-- Certified Printable Report Paper Card -->
+    <div class="glass-card" style="background: #FFFFFF; color: #0F172A; padding: 3.25rem 3rem; border-radius: 16px; box-shadow: 0 25px 50px rgba(0,0,0,0.6); border: 1px solid #CBD5E1;">
+        <!-- Document Header -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #3B82F6; padding-bottom: 1.5rem; margin-bottom: 1.75rem;">
+            <div>
+                <h1 style="font-size: 2.1rem; color: #0F172A; margin-bottom: 0.25rem; font-weight: 800; letter-spacing: -0.02em;">AI VEHICLE DAMAGE INSPECTION REPORT</h1>
+                <p style="font-size: 0.9rem; color: #475569; font-weight: 500;">Automated Computer Vision Damage & Cost Inspection Certificate</p>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-weight: 800; font-size: 1.25rem; color: #1E40AF;">ID: {{ report.report_id }}</div>
+                <div style="font-size: 0.85rem; color: #64748B; margin-top: 0.15rem;">Date: {{ report.created_at }}</div>
+                <div style="margin-top: 0.4rem;">
+                    <span style="background: #10B981; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 0.3rem;">
+                        <i class="fa-solid fa-circle-check"></i> VERIFIED CERTIFICATE
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle & Policy Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; background: #F8FAFC; padding: 1.35rem; border-radius: 10px; border: 1px solid #E2E8F0; margin-bottom: 2rem;">
+            <div>
+                <h4 style="color: #64748B; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 0.5rem; font-weight: 700; letter-spacing: 0.05em;">Owner Details</h4>
+                <p style="margin-bottom: 0.3rem; font-size: 0.925rem;"><strong>Name:</strong> {{ report_user.name }}</p>
+                <p style="margin-bottom: 0.3rem; font-size: 0.925rem;"><strong>Email:</strong> {{ report_user.email }}</p>
+                <p style="margin-bottom: 0.3rem; font-size: 0.925rem;"><strong>Contact:</strong> {{ report_user.contact_number or 'N/A' }}</p>
+            </div>
+            <div>
+                <h4 style="color: #64748B; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 0.5rem; font-weight: 700; letter-spacing: 0.05em;">Vehicle & Insurance Info</h4>
+                <p style="margin-bottom: 0.3rem; font-size: 0.925rem;"><strong>Vehicle:</strong> {{ vehicle.car_brand }} {{ vehicle.model }} ({{ vehicle.year }})</p>
+                <p style="margin-bottom: 0.3rem; font-size: 0.925rem;"><strong>VIN / Reg:</strong> {{ vehicle.vin_number }}</p>
+                <p style="margin-bottom: 0.3rem; font-size: 0.925rem;"><strong>Insurer / Policy:</strong> {{ vehicle.insurance_provider }} ({{ vehicle.policy_number }})</p>
+            </div>
+        </div>
+
+        <!-- Severity & AI Detections Summary -->
+        <h3 style="font-size: 1.2rem; color: #0F172A; margin-bottom: 1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 0.5rem; font-weight: 700;">
+            AI Damage Detections & Severity Matrix
+        </h3>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 2rem; font-size: 0.9rem;">
+            <thead>
+                <tr style="background: #F1F5F9; text-align: left; color: #475569;">
+                    <th style="padding: 0.85rem; border-bottom: 2px solid #CBD5E1;">#</th>
+                    <th style="padding: 0.85rem; border-bottom: 2px solid #CBD5E1;">Damaged Part</th>
+                    <th style="padding: 0.85rem; border-bottom: 2px solid #CBD5E1;">Damage Classification</th>
+                    <th style="padding: 0.85rem; border-bottom: 2px solid #CBD5E1;">Severity Rating</th>
+                    <th style="padding: 0.85rem; border-bottom: 2px solid #CBD5E1;">Confidence</th>
+                    <th style="padding: 0.85rem; border-bottom: 2px solid #CBD5E1; text-align: right;">Estimated Part Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in detections %}
+                    <tr style="border-bottom: 1px solid #E2E8F0;">
+                        <td style="padding: 0.85rem; color: #64748B;">{{ loop.index }}</td>
+                        <td style="padding: 0.85rem; font-weight: 700; color: #0F172A;">{{ d.part_name }}</td>
+                        <td style="padding: 0.85rem; color: #334155;">{{ d.damage_type }}</td>
+                        <td style="padding: 0.85rem; font-weight: 700;">
+                            {% if d.severity == 'Severe' %}<span style="color: #EF4444; background: #FEE2E2; padding: 0.15rem 0.5rem; border-radius: 4px;">Severe</span>{% elif d.severity == 'Moderate' %}<span style="color: #D97706; background: #FEF3C7; padding: 0.15rem 0.5rem; border-radius: 4px;">Moderate</span>{% else %}<span style="color: #059669; background: #D1FAE5; padding: 0.15rem 0.5rem; border-radius: 4px;">Minor</span>{% endif %}
+                        </td>
+                        <td style="padding: 0.85rem; font-weight: 600; color: #2563EB;">{{ d.confidence }}%</td>
+                        <td style="padding: 0.85rem; text-align: right; font-weight: 700; color: #0F172A;">Rs. {{ "%.2f"|format(d.part_cost) }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Cost Breakdown Table -->
+        <h3 style="font-size: 1.2rem; color: #0F172A; margin-bottom: 1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 0.5rem; font-weight: 700;">
+            Cost Estimation & Settlement Summary
+        </h3>
+
+        <div style="background: #F8FAFC; padding: 1.5rem; border-radius: 10px; border: 1px solid #E2E8F0; margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; color: #475569; font-size: 0.95rem;">
+                <span>Total Parts Replacement Cost:</span>
+                <span style="font-weight: 600; color: #0F172A;">Rs. {{ "%.2f"|format(report.total_parts_cost) }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; color: #475569; font-size: 0.95rem;">
+                <span>Total Labour Charges:</span>
+                <span style="font-weight: 600; color: #0F172A;">Rs. {{ "%.2f"|format(report.total_labour_cost) }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; color: #475569; font-size: 0.95rem;">
+                <span>Total Paint & Refinishing:</span>
+                <span style="font-weight: 600; color: #0F172A;">Rs. {{ "%.2f"|format(report.total_paint_cost) }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; color: #475569; font-size: 0.95rem;">
+                <span>Applicable GST Tax (18%):</span>
+                <span style="font-weight: 600; color: #0F172A;">Rs. {{ "%.2f"|format(report.tax_amount) }}</span>
+            </div>
+            <hr style="border-color: #CBD5E1; margin: 0.85rem 0;">
+            <div style="display: flex; justify-content: space-between; font-size: 1.4rem; font-weight: 800; color: #1E40AF;">
+                <span>TOTAL REPAIR ESTIMATE:</span>
+                <span>Rs. {{ "%.2f"|format(report.total_cost) }}</span>
+            </div>
+        </div>
+
+        <!-- Footer Signoff -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 3rem; padding-top: 1rem; border-top: 2px solid #E2E8F0;">
+            <div style="font-size: 0.775rem; color: #64748B; max-width: 450px; line-height: 1.5;">
+                <strong>System Notice:</strong> Generated automatically by AI Damage Detection System. Certified and verified via computer vision object detection models.
+            </div>
+            <div style="text-align: center;">
+                <div style="font-family: cursive; font-size: 1.35rem; color: #1E40AF; font-weight: 700;">AI Inspector Seal</div>
+                <div style="border-top: 1.5px solid #0F172A; width: 170px; font-size: 0.75rem; margin-top: 0.25rem; color: #475569; font-weight: 600;">Authorized AI Signature</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Feedback & Rating for this Inspection Report -->
+    {% if session.role != 'admin' %}
+    <div class="glass-card" style="margin-top: 2rem; padding: 2rem; border-color: rgba(245, 158, 11, 0.35);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h3 style="font-size: 1.3rem; color: var(--text-main); display: flex; align-items: center; gap: 0.6rem;">
+                    <i class="fa-solid fa-star" style="color: #F59E0B;"></i> Rate This Inspection Report & Service
+                </h3>
+                <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.2rem;">
+                    How accurate were the AI damage detections and repair cost calculations for Report #{{ report.report_id }}?
+                </p>
+            </div>
+            <span class="badge-severity badge-minor"><i class="fa-solid fa-shield-halved"></i> Report Feedback</span>
+        </div>
+
+        <form action="{{ url_for('submit_feedback') }}" method="POST">
+            <input type="hidden" name="report_id" value="{{ report.report_id }}">
+
+            <div class="info-box-bg" style="display: grid; grid-template-columns: 240px 1fr; gap: 1.5rem; align-items: start; padding: 1.5rem; border-radius: var(--radius-md);">
+                <div>
+                    <label class="form-label" style="margin-bottom: 0.5rem;">Your Rating (1 - 5 Stars)</label>
+                    <div class="star-rating" id="reportStarRating">
+                        <input type="radio" id="rstar5" name="rating" value="5" checked /><label for="rstar5" title="5 stars"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="rstar4" name="rating" value="4" /><label for="rstar4" title="4 stars"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="rstar3" name="rating" value="3" /><label for="rstar3" title="3 stars"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="rstar2" name="rating" value="2" /><label for="rstar2" title="2 stars"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="rstar1" name="rating" value="1" /><label for="rstar1" title="1 star"><i class="fa-solid fa-star"></i></label>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.4rem;">Select stars to rate</div>
+
+                    <div style="margin-top: 1.25rem;">
+                        <label class="form-label">Review Category</label>
+                        <select name="category" class="form-control" style="font-size: 0.875rem;">
+                            <option value="AI Accuracy">AI Damage Detection Accuracy</option>
+                            <option value="Cost Estimation">Repair Cost Estimation</option>
+                            <option value="Part Pricing">Part & Labour Cost Accuracy</option>
+                            <option value="Overall Experience">Overall Experience</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label" style="margin-bottom: 0.5rem;">Feedback & Comments</label>
+                    <textarea name="comments" class="form-control" rows="4" placeholder="How accurate was this damage report? Mention any parts that were over/under-estimated or platform feedback..." required style="resize: vertical;"></textarea>
+                    <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+                        <button type="submit" class="btn-custom btn-primary" style="padding: 0.65rem 1.4rem;">
+                            <i class="fa-solid fa-paper-plane"></i> Submit Inspection Feedback
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

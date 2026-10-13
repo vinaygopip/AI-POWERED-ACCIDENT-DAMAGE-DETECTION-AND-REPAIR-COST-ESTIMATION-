@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Login – AccidentAI{% endblock %}
+
+{% block content %}
+<div style="max-width: 480px; margin: 3rem auto;">
+    <div class="glass-card" style="padding: 2.5rem 2rem;">
+        <div style="text-align: center; margin-bottom: 1.75rem;">
+            <div style="width: 56px; height: 56px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto;">
+                <i class="fa-solid fa-right-to-bracket" style="font-size: 1.5rem; color: var(--primary);"></i>
+            </div>
+            <h2 style="font-size: 1.6rem; color: var(--text-main);">Sign In to Your Account</h2>
+            <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem;">Enter your credentials to access the AI vehicle scanner</p>
+        </div>
+
+        <!-- Login Form -->
+        <form id="login-form" action="{{ url_for('auth') }}" method="POST">
+            <input type="hidden" name="action" value="login">
+
+            <div class="form-group">
+                <label class="form-label"><i class="fa-solid fa-envelope" style="color: var(--primary);"></i> Email Address</label>
+                <input type="email" name="email" class="form-control" placeholder="user@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label"><i class="fa-solid fa-key" style="color: var(--primary);"></i> Password</label>
+                <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="btn-custom btn-primary" style="width: 100%; margin-top: 1.25rem; padding: 0.85rem;">
+                <i class="fa-solid fa-right-to-bracket"></i> Sign In to Account
+            </button>
+        </form>
+
+        <p style="text-align: center; margin-top: 1.5rem; font-size: 0.875rem; color: var(--text-muted);">
+            Don't have an account?
+            <a href="{{ url_for('register') }}" style="color: var(--accent-cyan); font-weight: 600; text-decoration: none;">
+                Create one here <i class="fa-solid fa-arrow-right" style="font-size: 0.75rem;"></i>
+            </a>
+        </p>
+    </div>
+</div>
+{% endblock %}
