@@ -1,0 +1,10 @@
+
+Flask
+Werkzeug
+bcrypt
+PyJWT
+opencv-python
+numpy
+ultralytics
+mysql-connector-python
+reportlab
